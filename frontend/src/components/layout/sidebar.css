@@ -1,0 +1,1663 @@
+/* =========================================================
+   LAB MANAGEMENT — SIDEBAR
+   Large / Professional Enterprise Navigation
+   Header + Workspace Compatible
+   ========================================================= */
+
+:root {
+  --sidebar-width: 270px;
+  --header-height: 72px;
+
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+
+  --sidebar-text: #344054;
+  --sidebar-muted: #7a8697;
+  --sidebar-heading: #8d99aa;
+
+  --sidebar-primary: #1769d2;
+  --sidebar-primary-dark: #1259b5;
+  --sidebar-primary-soft: #edf5ff;
+
+  --sidebar-hover: #f5f8fc;
+  --sidebar-active: #edf5ff;
+  --sidebar-sub-text: #64748b;
+
+  --sidebar-shadow:
+    1px 0 0 rgba(16, 24, 40, 0.025),
+    4px 0 20px rgba(16, 24, 40, 0.035);
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+
+  height: calc(100vh - var(--header-height));
+
+  flex: 0 0 var(--sidebar-width);
+
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+
+  background: var(--sidebar-bg);
+
+  border-right: 1px solid var(--sidebar-border);
+
+  box-shadow: var(--sidebar-shadow);
+
+  z-index: 40;
+
+  /*
+   * IMPORTANT:
+   * Sidebar scrolls when navigation becomes taller
+   * than the available viewport.
+   */
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  scrollbar-width: thin;
+  scrollbar-color: #d3dce7 transparent;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #d3dce7;
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #c2ccd9;
+}
+
+
+/* =========================================================
+   TOP ACTIONS
+   ========================================================= */
+
+.sidebar-actions {
+  padding: 22px 17px 14px;
+}
+
+
+/* =========================================================
+   NEW BILL
+   ========================================================= */
+
+.sidebar-new-bill {
+  position: relative;
+
+  min-height: 62px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  padding: 9px 13px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #d4e3f4;
+  border-radius: 10px;
+
+  background: #f7fbff;
+
+  color: var(--sidebar-text);
+
+  text-decoration: none;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.sidebar-new-bill:hover {
+  background: #f0f7ff;
+
+  border-color: #b8d1ec;
+
+  box-shadow:
+    0 4px 12px rgba(23, 105, 210, 0.09);
+
+  transform: translateY(-1px);
+}
+
+.sidebar-new-bill.active {
+  border-color: #a6c7ed;
+  background: var(--sidebar-primary-soft);
+}
+
+
+/* =========================================================
+   NEW BILL ICON
+   ========================================================= */
+
+.sidebar-new-icon {
+  width: 40px;
+  height: 40px;
+
+  flex: 0 0 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: var(--sidebar-primary);
+  color: #ffffff;
+
+  box-shadow:
+    0 4px 9px rgba(23, 105, 210, 0.20);
+
+  transition:
+    background 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.sidebar-new-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-new-bill:hover .sidebar-new-icon {
+  background: var(--sidebar-primary-dark);
+
+  transform: scale(1.04);
+
+  box-shadow:
+    0 5px 13px rgba(23, 105, 210, 0.28);
+}
+
+
+/* =========================================================
+   NEW BILL TEXT
+   ========================================================= */
+
+.sidebar-new-text {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.sidebar-new-text strong {
+  color: #17304f;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  line-height: 1.2;
+}
+
+.sidebar-new-text small {
+  color: #7b899a;
+
+  font-size: 11px;
+  font-weight: 500;
+
+  line-height: 1.25;
+}
+
+
+/* =========================================================
+   GETTING STARTED
+   ========================================================= */
+
+.sidebar-getting-started {
+  min-height: 45px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  margin-top: 9px;
+
+  padding: 0 13px;
+
+  box-sizing: border-box;
+
+  border: 1px solid transparent;
+  border-radius: 9px;
+
+  color: #566477;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  text-decoration: none;
+
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.sidebar-getting-started:hover {
+  color: var(--sidebar-primary);
+  background: #f5f8fc;
+}
+
+.sidebar-getting-started.active {
+  color: var(--sidebar-primary);
+
+  background: var(--sidebar-primary-soft);
+
+  border-color: #d9e8f8;
+}
+
+
+/* =========================================================
+   GETTING STARTED ICON
+   ========================================================= */
+
+.getting-icon {
+  width: 30px;
+  height: 30px;
+
+  flex: 0 0 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  background: #f2f5f8;
+  color: #718096;
+
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.getting-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.sidebar-getting-started:hover .getting-icon,
+.sidebar-getting-started.active .getting-icon {
+  background: #dfeeff;
+  color: var(--sidebar-primary);
+
+  transform: scale(1.03);
+}
+
+
+/* =========================================================
+   NAVIGATION
+   IMPORTANT:
+   Do NOT use flex: 1 here.
+   Navigation grows naturally when submenu opens.
+   This pushes the footer animation downward.
+   ========================================================= */
+
+.sidebar-nav {
+  flex: 0 0 auto;
+
+  min-height: 0;
+
+  padding: 12px 13px 0;
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   MENU LABEL
+   ========================================================= */
+
+.sidebar-nav-label {
+  padding: 15px 12px 9px;
+
+  color: var(--sidebar-heading);
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 1px;
+
+  text-transform: uppercase;
+}
+
+
+/* =========================================================
+   NORMAL NAV LINK
+   ========================================================= */
+
+.sidebar-nav-link,
+.sidebar-nav-group-button {
+  width: 100%;
+
+  min-height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  box-sizing: border-box;
+
+  border: 1px solid transparent;
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: var(--sidebar-text);
+
+  font-family: inherit;
+
+  font-size: 13.5px;
+  font-weight: 600;
+
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.sidebar-nav-link {
+  padding: 0 12px;
+  margin-bottom: 4px;
+}
+
+.sidebar-nav-group-button {
+  padding: 0 11px;
+  text-align: left;
+}
+
+
+/* =========================================================
+   NAV LEFT
+   ========================================================= */
+
+.sidebar-nav-left {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+}
+
+
+/* =========================================================
+   NAV ICON
+   ========================================================= */
+
+.sidebar-nav-icon {
+  width: 30px;
+  height: 30px;
+
+  flex: 0 0 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  color: #718096;
+
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.sidebar-nav-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.sidebar-nav-link:hover,
+.sidebar-nav-group-button:hover {
+  color: #1d4f82;
+
+  background: var(--sidebar-hover);
+}
+
+.sidebar-nav-link:hover .sidebar-nav-icon,
+.sidebar-nav-group-button:hover .sidebar-nav-icon {
+  color: var(--sidebar-primary);
+
+  background: #eaf3fc;
+
+  transform: scale(1.06);
+
+  box-shadow:
+    0 2px 7px rgba(23, 105, 210, 0.08);
+}
+
+
+/* =========================================================
+   ACTIVE NAVIGATION
+   ========================================================= */
+
+.sidebar-nav-link.active {
+  position: relative;
+
+  color: var(--sidebar-primary);
+
+  background: var(--sidebar-active);
+
+  border-color: #dceafa;
+}
+
+.sidebar-nav-link.active::before {
+  content: "";
+
+  position: absolute;
+
+  left: -13px;
+
+  top: 8px;
+  bottom: 8px;
+
+  width: 3px;
+
+  border-radius: 0 4px 4px 0;
+
+  background: var(--sidebar-primary);
+
+  box-shadow:
+    0 0 7px rgba(23, 105, 210, 0.25);
+}
+
+.sidebar-nav-link.active .sidebar-nav-icon {
+  color: var(--sidebar-primary);
+
+  background: #dfeeff;
+
+  box-shadow:
+    0 3px 8px rgba(23, 105, 210, 0.08);
+}
+
+
+/* =========================================================
+   GROUP
+   ========================================================= */
+
+.sidebar-nav-group {
+  margin-bottom: 4px;
+}
+
+.sidebar-nav-group-button.section-active {
+  color: #24598d;
+
+  background: #f5f8fc;
+}
+
+.sidebar-nav-group-button.section-active .sidebar-nav-icon {
+  color: var(--sidebar-primary);
+
+  background: #eaf3fc;
+}
+
+
+/* =========================================================
+   CHEVRON
+   ========================================================= */
+
+.sidebar-chevron {
+  width: 29px;
+  height: 29px;
+
+  flex: 0 0 29px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 7px;
+
+  color: #98a2b3;
+
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    transform 180ms ease;
+}
+
+.sidebar-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-nav-group-button:hover .sidebar-chevron {
+  color: #52657a;
+  background: #edf2f7;
+}
+
+.sidebar-chevron.expanded {
+  color: var(--sidebar-primary);
+
+  transform: rotate(0deg);
+}
+
+
+/* =========================================================
+   SUBMENU
+   ========================================================= */
+
+.sidebar-submenu {
+  position: relative;
+
+  margin: 3px 0 7px 25px;
+
+  padding: 4px 0 5px 17px;
+
+  border-left: 1px solid #dce4ed;
+}
+
+.sidebar-submenu-link {
+  position: relative;
+
+  min-height: 37px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 0 10px;
+
+  box-sizing: border-box;
+
+  border-radius: 7px;
+
+  color: var(--sidebar-sub-text);
+
+  font-size: 12.5px;
+  font-weight: 500;
+
+  text-decoration: none;
+
+  transition:
+    color 140ms ease,
+    background 140ms ease,
+    padding-left 140ms ease;
+}
+
+.sidebar-submenu-link:hover {
+  color: #245b91;
+
+  background: #f5f8fc;
+
+  padding-left: 12px;
+}
+
+.sidebar-submenu-link.active {
+  color: var(--sidebar-primary);
+
+  background: #edf5ff;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   SUBMENU DOT
+   ========================================================= */
+
+.submenu-dot {
+  width: 6px;
+  height: 6px;
+
+  flex: 0 0 6px;
+
+  border-radius: 50%;
+
+  background: #c2ccd8;
+
+  transition:
+    background 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.sidebar-submenu-link:hover .submenu-dot {
+  background: #76a9d9;
+
+  transform: scale(1.15);
+}
+
+.sidebar-submenu-link.active .submenu-dot {
+  background: var(--sidebar-primary);
+
+  transform: scale(1.25);
+
+  box-shadow:
+    0 0 0 3px #dcecff,
+    0 0 8px rgba(23, 105, 210, 0.22);
+}
+
+
+/* =========================================================
+   FOOTER
+   IMPORTANT:
+   This stays AFTER navigation in normal flow.
+   ========================================================= */
+
+.sidebar-footer {
+  position: relative;
+
+  flex-shrink: 0;
+
+  width: 100%;
+
+  min-height: 155px;
+  height: 155px;
+
+  box-sizing: border-box;
+
+  padding: 0 17px 18px;
+
+  margin-top: 10px;
+
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   FOOTER DIVIDER
+   ========================================================= */
+
+.sidebar-footer-line {
+  position: relative;
+
+  z-index: 20;
+
+  width: 100%;
+
+  height: 1px;
+
+  margin: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(37, 99, 235, 0.10),
+      rgba(6, 182, 212, 0.22),
+      rgba(37, 99, 235, 0.10),
+      transparent
+    );
+}
+
+
+/* =========================================================
+   OPTIONAL FOOTER CONTENT
+   ========================================================= */
+
+.sidebar-footer-content {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 0 5px;
+
+  color: #9aa5b3;
+
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.sidebar-status-dot {
+  width: 7px;
+  height: 7px;
+
+  flex: 0 0 7px;
+
+  border-radius: 50%;
+
+  background: #32a36b;
+
+  box-shadow:
+    0 0 0 3px #e8f6ef;
+}
+
+
+/* =========================================================
+   PREMIUM 3D LAB ANIMATION
+   ========================================================= */
+
+.sidebar-lab-animation {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  width: 100%;
+  height: 154px;
+
+  overflow: hidden;
+
+  pointer-events: none;
+
+  z-index: 1;
+
+  perspective: 700px;
+}
+
+
+/* =========================================================
+   MAIN AMBIENT GLOW
+   ========================================================= */
+
+.lab-bottom-glow {
+  position: absolute;
+
+  left: 50%;
+  bottom: -70px;
+
+  width: 230px;
+  height: 135px;
+
+  transform: translateX(-50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      ellipse,
+      rgba(37, 99, 235, 0.23) 0%,
+      rgba(6, 182, 212, 0.14) 30%,
+      rgba(59, 130, 246, 0.07) 52%,
+      transparent 74%
+    );
+
+  filter: blur(18px);
+
+  animation: premiumGlow 5s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   SECONDARY LIGHT
+   ========================================================= */
+
+.sidebar-lab-animation::before {
+  content: "";
+
+  position: absolute;
+
+  left: 50%;
+  top: 28px;
+
+  width: 120px;
+  height: 85px;
+
+  transform: translateX(-50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(56, 189, 248, 0.13),
+      transparent 70%
+    );
+
+  filter: blur(13px);
+
+  animation: ambientLight 6s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   3D FLASK
+   ========================================================= */
+
+.lab-flask {
+  position: absolute;
+
+  left: 50%;
+  bottom: -7px;
+
+  width: 76px;
+  height: 116px;
+
+  transform:
+    translateX(-50%)
+    perspective(600px)
+    rotateY(-10deg);
+
+  transform-origin: center bottom;
+
+  animation: premiumFlaskFloat 5s ease-in-out infinite;
+
+  z-index: 10;
+
+  filter:
+    drop-shadow(0 10px 16px rgba(37, 99, 235, 0.12))
+    drop-shadow(0 0 9px rgba(6, 182, 212, 0.11));
+}
+
+
+/* =========================================================
+   FLASK NECK
+   ========================================================= */
+
+.flask-neck {
+  position: absolute;
+
+  left: 26px;
+  top: 0;
+
+  width: 24px;
+  height: 51px;
+
+  box-sizing: border-box;
+
+  border-left: 2px solid rgba(14, 165, 233, 0.58);
+  border-right: 2px solid rgba(37, 99, 235, 0.40);
+  border-top: 2px solid rgba(14, 165, 233, 0.58);
+
+  border-radius: 8px 8px 3px 3px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.88),
+      rgba(125, 211, 252, 0.18),
+      rgba(255, 255, 255, 0.66)
+    );
+
+  box-shadow:
+    inset 4px 0 8px rgba(255, 255, 255, 0.78),
+    inset -3px 0 7px rgba(37, 99, 235, 0.08),
+    0 0 11px rgba(56, 189, 248, 0.14);
+}
+
+
+/* =========================================================
+   GLASS REFLECTION
+   ========================================================= */
+
+.flask-neck::after {
+  content: "";
+
+  position: absolute;
+
+  left: 4px;
+  top: 5px;
+
+  width: 3px;
+  height: 35px;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.75);
+
+  filter: blur(1px);
+}
+
+
+/* =========================================================
+   NECK LIQUID
+   ========================================================= */
+
+.flask-liquid-neck {
+  position: absolute;
+
+  left: 3px;
+  right: 3px;
+  bottom: 4px;
+
+  height: 13px;
+
+  border-radius: 4px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #67e8f9,
+      #38bdf8 45%,
+      #2563eb
+    );
+
+  opacity: 0.82;
+
+  box-shadow:
+    0 0 8px rgba(6, 182, 212, 0.24),
+    inset 0 2px 3px rgba(255, 255, 255, 0.38);
+}
+
+
+/* =========================================================
+   FLASK BODY
+   ========================================================= */
+
+.flask-body {
+  position: absolute;
+
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+
+  height: 76px;
+
+  clip-path: polygon(
+    31% 0,
+    69% 0,
+    69% 21%,
+    92% 70%,
+    100% 100%,
+    0 100%,
+    8% 70%,
+    31% 21%
+  );
+
+  background:
+    linear-gradient(
+      105deg,
+      rgba(255, 255, 255, 0.84),
+      rgba(186, 230, 253, 0.20) 27%,
+      rgba(56, 189, 248, 0.13) 48%,
+      rgba(37, 99, 235, 0.17) 76%,
+      rgba(255, 255, 255, 0.64)
+    );
+
+  border: 1px solid rgba(14, 165, 233, 0.44);
+
+  box-shadow:
+    inset 8px 0 18px rgba(255, 255, 255, 0.58),
+    inset -8px 0 18px rgba(37, 99, 235, 0.10),
+    0 7px 22px rgba(37, 99, 235, 0.13);
+}
+
+
+/* =========================================================
+   GLASS REFLECTION
+   ========================================================= */
+
+.flask-body::before {
+  content: "";
+
+  position: absolute;
+
+  left: 12px;
+  top: 9px;
+
+  width: 8px;
+  height: 51px;
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.75),
+      rgba(255, 255, 255, 0.08)
+    );
+
+  transform: rotate(8deg);
+
+  filter: blur(1px);
+}
+
+
+/* =========================================================
+   FLASK LIQUID
+   ========================================================= */
+
+.flask-liquid {
+  position: absolute;
+
+  left: 4px;
+  right: 4px;
+  bottom: 3px;
+
+  height: 43px;
+
+  overflow: hidden;
+
+  clip-path: polygon(
+    4% 17%,
+    17% 11%,
+    31% 19%,
+    46% 10%,
+    61% 18%,
+    77% 11%,
+    91% 18%,
+    100% 100%,
+    0 100%
+  );
+
+  background:
+    linear-gradient(
+      180deg,
+      #67e8f9 0%,
+      #38bdf8 32%,
+      #2563eb 100%
+    );
+
+  box-shadow:
+    inset 0 4px 9px rgba(255, 255, 255, 0.34),
+    0 -2px 8px rgba(6, 182, 212, 0.20);
+
+  animation: liquidWave 3.2s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   LIQUID SHINE
+   ========================================================= */
+
+.flask-liquid::before {
+  content: "";
+
+  position: absolute;
+
+  left: 8px;
+  top: 5px;
+
+  width: 45px;
+  height: 3px;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.46);
+
+  filter: blur(1px);
+}
+
+
+/* =========================================================
+   BUBBLES
+   ========================================================= */
+
+.bubble {
+  position: absolute;
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  border: 1px solid rgba(255, 255, 255, 0.88);
+
+  background:
+    radial-gradient(
+      circle at 30% 25%,
+      #ffffff 0%,
+      #a5f3fc 35%,
+      #38bdf8 75%
+    );
+
+  box-shadow:
+    0 0 8px rgba(34, 211, 238, 0.68),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.82);
+
+  opacity: 0;
+
+  animation: premiumBubble 3.8s ease-in infinite;
+}
+
+.bubble-1 {
+  left: 17px;
+  bottom: 4px;
+}
+
+.bubble-2 {
+  left: 37px;
+  bottom: 3px;
+
+  width: 5px;
+  height: 5px;
+
+  animation-delay: 0.9s;
+}
+
+.bubble-3 {
+  left: 48px;
+  bottom: 7px;
+
+  width: 6px;
+  height: 6px;
+
+  animation-delay: 1.7s;
+}
+
+.bubble-4 {
+  left: 28px;
+  bottom: 5px;
+
+  width: 4px;
+  height: 4px;
+
+  animation-delay: 2.5s;
+}
+
+
+/* =========================================================
+   MOLECULES
+   ========================================================= */
+
+.bottom-molecule {
+  position: absolute;
+
+  width: 48px;
+  height: 48px;
+
+  opacity: 0.72;
+
+  animation:
+    premiumMoleculeFloat 7s ease-in-out infinite;
+
+  z-index: 6;
+}
+
+.bottom-molecule span {
+  position: absolute;
+
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle at 30% 25%,
+      #ffffff 0%,
+      #a5f3fc 28%,
+      #38bdf8 55%,
+      #2563eb 100%
+    );
+
+  box-shadow:
+    0 0 9px rgba(6, 182, 212, 0.68),
+    0 0 16px rgba(37, 99, 235, 0.24);
+}
+
+.bottom-molecule span:nth-child(1) {
+  left: 0;
+  top: 20px;
+}
+
+.bottom-molecule span:nth-child(2) {
+  right: 0;
+  top: 2px;
+}
+
+.bottom-molecule span:nth-child(3) {
+  right: 4px;
+  bottom: 0;
+}
+
+
+/* MOLECULE CONNECTIONS */
+
+.bottom-molecule::before,
+.bottom-molecule::after {
+  content: "";
+
+  position: absolute;
+
+  height: 2px;
+
+  border-radius: 2px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(6, 182, 212, 0.35),
+      rgba(37, 99, 235, 0.75)
+    );
+
+  box-shadow:
+    0 0 5px rgba(6, 182, 212, 0.25);
+
+  transform-origin: left center;
+}
+
+.bottom-molecule::before {
+  width: 32px;
+
+  left: 6px;
+  top: 23px;
+
+  transform: rotate(-29deg);
+}
+
+.bottom-molecule::after {
+  width: 25px;
+
+  right: 5px;
+  top: 19px;
+
+  transform: rotate(67deg);
+}
+
+
+/* =========================================================
+   MOLECULE POSITIONS
+   ========================================================= */
+
+.molecule-left {
+  left: 15px;
+  top: 39px;
+}
+
+.molecule-right {
+  right: 14px;
+  top: 72px;
+
+  transform: scale(0.72);
+
+  animation-delay: -3s;
+}
+
+
+/* =========================================================
+   FLOATING PARTICLES
+   ========================================================= */
+
+.bottom-particle {
+  position: absolute;
+
+  width: 5px;
+  height: 5px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      #ffffff 0%,
+      #67e8f9 35%,
+      #3b82f6 100%
+    );
+
+  box-shadow:
+    0 0 7px rgba(6, 182, 212, 0.90),
+    0 0 15px rgba(37, 99, 235, 0.35);
+
+  animation:
+    premiumParticleFloat 5s ease-in-out infinite;
+}
+
+.particle-a {
+  left: 24%;
+  top: 30px;
+}
+
+.particle-b {
+  right: 25%;
+  top: 23px;
+
+  animation-delay: -1.5s;
+}
+
+.particle-c {
+  right: 16%;
+  bottom: 36px;
+
+  animation-delay: -3s;
+}
+
+
+/* =========================================================
+   EXTRA PARTICLE
+   ========================================================= */
+
+.sidebar-lab-animation::after {
+  content: "";
+
+  position: absolute;
+
+  left: 38%;
+  top: 66px;
+
+  width: 4px;
+  height: 4px;
+
+  border-radius: 50%;
+
+  background: #67e8f9;
+
+  box-shadow:
+    0 0 7px rgba(6, 182, 212, 0.80);
+
+  animation: tinyParticle 4s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes premiumFlaskFloat {
+  0%,
+  100% {
+    transform:
+      translateX(-50%)
+      perspective(600px)
+      rotateY(-10deg)
+      translateY(0);
+  }
+
+  50% {
+    transform:
+      translateX(-50%)
+      perspective(600px)
+      rotateY(10deg)
+      translateY(-7px);
+  }
+}
+
+
+@keyframes liquidWave {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+
+@keyframes premiumBubble {
+  0% {
+    transform:
+      translateY(8px)
+      translateX(0)
+      scale(0.55);
+
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.9;
+  }
+
+  55% {
+    transform:
+      translateY(-22px)
+      translateX(3px)
+      scale(0.9);
+
+    opacity: 0.72;
+  }
+
+  100% {
+    transform:
+      translateY(-46px)
+      translateX(-2px)
+      scale(1.05);
+
+    opacity: 0;
+  }
+}
+
+
+@keyframes premiumMoleculeFloat {
+  0%,
+  100% {
+    transform:
+      translate3d(0, 0, 0)
+      rotate(0deg);
+  }
+
+  50% {
+    transform:
+      translate3d(7px, -9px, 0)
+      rotate(10deg);
+  }
+}
+
+
+@keyframes premiumParticleFloat {
+  0%,
+  100% {
+    transform:
+      translate3d(0, 0, 0)
+      scale(0.8);
+
+    opacity: 0.25;
+  }
+
+  50% {
+    transform:
+      translate3d(4px, -18px, 0)
+      scale(1.25);
+
+    opacity: 1;
+  }
+}
+
+
+@keyframes premiumGlow {
+  0%,
+  100% {
+    transform:
+      translateX(-50%)
+      scale(0.90);
+
+    opacity: 0.65;
+  }
+
+  50% {
+    transform:
+      translateX(-50%)
+      scale(1.12);
+
+    opacity: 1;
+  }
+}
+
+
+@keyframes ambientLight {
+  0%,
+  100% {
+    transform:
+      translateX(-50%)
+      scale(0.90);
+
+    opacity: 0.5;
+  }
+
+  50% {
+    transform:
+      translateX(-50%)
+      scale(1.15);
+
+    opacity: 1;
+  }
+}
+
+
+@keyframes tinyParticle {
+  0%,
+  100% {
+    transform:
+      translate(0, 0)
+      scale(0.7);
+
+    opacity: 0.2;
+  }
+
+  50% {
+    transform:
+      translate(10px, -20px)
+      scale(1.2);
+
+    opacity: 0.9;
+  }
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  :root {
+    --sidebar-width: 245px;
+  }
+
+  .sidebar {
+    width: 245px;
+    min-width: 245px;
+    flex-basis: 245px;
+  }
+
+  .sidebar-actions {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .sidebar-nav {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .sidebar-nav-link,
+  .sidebar-nav-group-button {
+    font-size: 13px;
+  }
+}
+
+
+/* =========================================================
+   SMALL SCREENS
+   ========================================================= */
+
+@media (max-width: 760px) {
+  :root {
+    --sidebar-width: 225px;
+  }
+
+  .sidebar {
+    width: 225px;
+    min-width: 225px;
+    flex-basis: 225px;
+  }
+
+  .sidebar-new-text small {
+    display: none;
+  }
+
+  .sidebar-new-bill {
+    min-height: 52px;
+  }
+
+  .sidebar-new-icon {
+    width: 35px;
+    height: 35px;
+    flex-basis: 35px;
+  }
+
+  .sidebar-new-text strong {
+    font-size: 13px;
+  }
+
+  .sidebar-nav-link,
+  .sidebar-nav-group-button {
+    min-height: 42px;
+    font-size: 12.5px;
+  }
+
+  .sidebar-nav-icon {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+
+  .sidebar-submenu-link {
+    min-height: 34px;
+    font-size: 12px;
+  }
+
+  .sidebar-footer {
+    height: 145px;
+    min-height: 145px;
+  }
+
+  .sidebar-lab-animation {
+    height: 144px;
+  }
+
+  .lab-flask {
+    transform:
+      translateX(-50%)
+      perspective(600px)
+      scale(0.9)
+      rotateY(-10deg);
+  }
+
+  .molecule-left {
+    left: 9px;
+  }
+
+  .molecule-right {
+    right: 8px;
+  }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar *,
+  .sidebar *::before,
+  .sidebar *::after {
+    transition: none !important;
+  }
+
+  .lab-flask,
+  .flask-liquid,
+  .bubble,
+  .bottom-molecule,
+  .bottom-particle,
+  .lab-bottom-glow {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,13 @@
+export default function IconButton({ children, label, className = "", ...p }) {
+  return (
+    <button
+      type="button"
+      className={"hdr-icon " + className}
+      aria-label={label}
+      title={label}
+      {...p}
+    >
+      {children}
+    </button>
+  );
+}

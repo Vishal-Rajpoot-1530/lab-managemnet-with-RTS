@@ -1,0 +1,133 @@
+/* =========================================================
+   APP LAYOUT
+   Header
+   └── Workspace
+       ├── Sidebar
+       └── Content
+   ========================================================= */
+
+:root {
+  --app-sidebar-width: 252px;
+  --app-bg: #f5f7fa;
+}
+
+
+/* =========================================================
+   APPLICATION
+   ========================================================= */
+
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+
+  background: var(--app-bg);
+
+  color: #172033;
+}
+
+
+/* =========================================================
+   WORKSPACE
+   IMPORTANT:
+   Sidebar is part of the flex layout.
+   It does NOT overlap the header or content.
+   ========================================================= */
+
+.app-workspace {
+  width: 100%;
+  min-height: calc(100vh - 64px);
+
+  display: flex;
+  align-items: stretch;
+
+  background: var(--app-bg);
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.app-workspace > .sidebar {
+  position: sticky;
+
+  top: 0;
+
+  width: var(--app-sidebar-width);
+  min-width: var(--app-sidebar-width);
+  height: calc(100vh - 64px);
+
+  flex: 0 0 var(--app-sidebar-width);
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+   IMPORTANT:
+   NO margin-left here.
+   Flexbox automatically places it beside Sidebar.
+   ========================================================= */
+
+.app-content {
+  flex: 1 1 auto;
+
+  width: auto;
+  min-width: 0;
+
+  min-height: calc(100vh - 64px);
+
+  box-sizing: border-box;
+
+  background: var(--app-bg);
+
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   CONTENT DIRECT CHILD
+   ========================================================= */
+
+.app-content > * {
+  min-width: 0;
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  :root {
+    --app-sidebar-width: 230px;
+  }
+
+  .app-workspace > .sidebar {
+    width: 230px;
+    min-width: 230px;
+
+    flex-basis: 230px;
+  }
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 760px) {
+
+  :root {
+    --app-sidebar-width: 220px;
+  }
+
+  .app-workspace > .sidebar {
+    width: 220px;
+    min-width: 220px;
+
+    flex-basis: 220px;
+  }
+}

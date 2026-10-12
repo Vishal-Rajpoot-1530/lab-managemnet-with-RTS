@@ -1,0 +1,517 @@
+
+/* ==========================================
+   LABLIMS - LAB ACCOUNT
+   Plain CSS, no Tailwind
+   ========================================== */
+
+.lab-account-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+  color: #172033;
+}
+
+.lab-account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+/* Laboratory overview */
+
+.lab-overview-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 27px 29px;
+  border: 1px solid #dfe5ff;
+  border-radius: 17px;
+  background:
+    radial-gradient(
+      circle at 95% 0%,
+      rgb(99 102 241 / 12%),
+      transparent 38%
+    ),
+    linear-gradient(120deg, #ffffff, #f8faff);
+  box-shadow: 0 5px 20px rgb(15 23 42 / 3%);
+}
+
+.lab-overview-main {
+  display: flex;
+  align-items: center;
+  gap: 19px;
+  min-width: 0;
+}
+
+.lab-overview-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+  border: 1px solid #dfe3ff;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #eef2ff, #dfe5ff);
+  color: #4f46e5;
+}
+
+.lab-overview-details {
+  min-width: 0;
+}
+
+.lab-overview-eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: #6366f1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+}
+
+.lab-overview-details h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -0.5px;
+  line-height: 1.4;
+}
+
+.lab-overview-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.lab-id-badge,
+.lab-location-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.lab-id-badge {
+  padding: 6px 10px;
+  border: 1px solid #dfe5ff;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 700;
+}
+
+.lab-location-label {
+  color: #64748b;
+}
+
+.lab-overview-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 9px 13px;
+  border: 1px solid #e0e7ff;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.lab-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #818cf8;
+}
+
+/* Shared panel appearance */
+
+.lab-account-form .manage-panel {
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgb(15 23 42 / 3%);
+}
+
+.lab-account-form .manage-panel-header {
+  padding: 23px 25px 19px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.lab-account-form .manage-panel-header h2 {
+  color: #1e293b;
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.2px;
+}
+
+.lab-account-form .manage-panel-header p {
+  margin-top: 6px;
+  color: #8490a3;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.lab-account-form .manage-panel-body {
+  padding: 24px 25px;
+}
+
+/* Section introductions */
+
+.lab-section-intro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 23px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid #edf0f6;
+}
+
+.lab-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border: 1px solid #e0e7ff;
+  border-radius: 11px;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.lab-section-intro h3 {
+  margin: 0;
+  color: #273449;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.lab-section-intro p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Responsive field grid */
+
+.lab-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 21px 18px;
+  min-width: 0;
+}
+
+.lab-field {
+  min-width: 0;
+}
+
+.lab-field-wide {
+  grid-column: 1 / -1;
+}
+
+/* Override shared fields for this page */
+
+.lab-account-form .manage-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lab-account-form .manage-label {
+  color: #374151;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.lab-account-form .manage-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 45px;
+  padding: 11px 13px;
+  border: 1px solid #d8e0eb;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1e293b;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.lab-account-form .manage-input::placeholder {
+  color: #a0aabd;
+}
+
+.lab-account-form .manage-input:hover {
+  border-color: #bac5d7;
+}
+
+.lab-account-form .manage-input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 11%);
+}
+
+.lab-account-form .manage-textarea {
+  min-height: 95px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.lab-account-form .manage-select {
+  cursor: pointer;
+}
+
+/* Informational notice */
+
+.lab-info-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 14px 15px;
+  border: 1px solid #dfe5ff;
+  border-radius: 10px;
+  background: #f7f8ff;
+}
+
+.lab-info-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #6366f1;
+}
+
+.lab-info-note p {
+  margin: 0;
+  color: #687398;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* Operating hours */
+
+.lab-hours-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 23px;
+  padding: 17px;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  background: linear-gradient(110deg, #f7f8ff, #ffffff);
+}
+
+.lab-hours-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lab-hours-copy > svg {
+  flex-shrink: 0;
+  color: #6366f1;
+}
+
+.lab-hours-copy h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lab-hours-copy p {
+  margin: 5px 0 0;
+  color: #7c89a0;
+  font-size: 12px;
+}
+
+.lab-hours-tag {
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border: 1px solid #e0e7ff;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #6366f1;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.lab-time-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 650px;
+}
+
+/* Save footer */
+
+.lab-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 19px 22px;
+  border: 1px solid #e1e7f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 15px rgb(15 23 42 / 3%);
+}
+
+.lab-save-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lab-save-copy > svg {
+  flex-shrink: 0;
+  color: #6366f1;
+}
+
+.lab-save-copy div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lab-save-copy strong {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.lab-save-copy span {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.lab-save-bar .manage-save-button {
+  flex-shrink: 0;
+  min-height: 43px;
+  padding: 11px 17px;
+  border: 1px solid #4f46e5;
+  border-radius: 9px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.lab-save-bar .manage-save-button:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.lab-save-bar .manage-save-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Tablet */
+
+@media (max-width: 900px) {
+  .lab-fields-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lab-field-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .lab-account-page {
+    gap: 18px;
+  }
+
+  .lab-overview-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px;
+    border-radius: 14px;
+  }
+
+  .lab-overview-main {
+    align-items: flex-start;
+    gap: 13px;
+    width: 100%;
+  }
+
+  .lab-overview-icon {
+    width: 53px;
+    height: 53px;
+    border-radius: 15px;
+  }
+
+  .lab-overview-details h2 {
+    font-size: 19px;
+  }
+
+  .lab-overview-status {
+    align-self: flex-start;
+  }
+
+  .lab-account-form {
+    gap: 17px;
+  }
+
+  .lab-account-form .manage-panel-header {
+    padding: 19px 16px 15px;
+  }
+
+  .lab-account-form .manage-panel-body {
+    padding: 18px 16px;
+  }
+
+  .lab-fields-grid,
+  .lab-time-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 17px;
+  }
+
+  .lab-field-wide {
+    grid-column: auto;
+  }
+
+  .lab-hours-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .lab-save-bar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 17px;
+  }
+
+  .lab-save-bar .manage-save-button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-account-form .manage-input {
+    transition: none;
+  }
+}
