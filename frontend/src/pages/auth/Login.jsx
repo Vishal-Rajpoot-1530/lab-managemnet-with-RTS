@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -13,6 +14,8 @@ import PasswordInput from "../../components/common/PasswordInput";
 import Button from "../../components/common/Button";
 import "./auth.css";
 
+import { authApi } from "../../api/core/apiAuth";
+
 export default function EmployeeLogin() {
   const navigate = useNavigate();
 
@@ -22,20 +25,37 @@ export default function EmployeeLogin() {
     remember: false,
   });
 
-  const submit = (e) => {
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
     e.preventDefault();
 
-    // Frontend phase only.
-    // Replace with authApi.login() when backend integration starts.
-    navigate("/dashboard");
+    if (loading) return;
+
+    setError("");
+
+    if (!form.identity.trim() || !form.password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await authApi.login(form.identity, form.password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err?.message || "Login failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="auth-page">
-
       {/* ================= LEFT SIDE ================= */}
       <section className="auth-visual">
-
         <div className="auth-visual-brand">
           <div className="auth-logo-mark">
             <FlaskConical size={23} />
@@ -50,7 +70,6 @@ export default function EmployeeLogin() {
         </div>
 
         <div className="auth-illustration">
-
           <div className="auth-illustration-circle" />
 
           <div className="auth-lab-card auth-lab-card--one">
@@ -74,7 +93,6 @@ export default function EmployeeLogin() {
             <div className="microscope-base" />
             <div className="microscope-stage" />
           </div>
-
         </div>
 
         <div className="auth-visual-content">
@@ -87,8 +105,8 @@ export default function EmployeeLogin() {
           </h2>
 
           <p>
-            Manage patients, investigations, reports and
-            laboratory workflows from one secure workspace.
+            Manage patients, investigations, reports and laboratory workflows
+            from one secure workspace.
           </p>
         </div>
 
@@ -99,15 +117,11 @@ export default function EmployeeLogin() {
           <span>•</span>
           <span>Efficient</span>
         </div>
-
       </section>
-
 
       {/* ================= RIGHT SIDE ================= */}
       <section className="auth-login-panel">
-
         <div className="auth-login-container">
-
           <div className="auth-mobile-brand">
             <div className="auth-logo-mark">
               <FlaskConical size={20} />
@@ -119,20 +133,33 @@ export default function EmployeeLogin() {
           <div className="auth-login-heading">
             <h1>Login</h1>
 
-            <p>
-              Sign in to your account to continue
-            </p>
+            <p>Sign in to your account to continue</p>
           </div>
 
-
           <AuthCard title="">
-
             <form onSubmit={submit}>
+              {error && (
+                <div
+                  className="api-error"
+                  role="alert"
+                  style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    color: "#b91c1c",
+                    borderRadius: 8,
+                    padding: "10px 12px",
+                    fontSize: 13,
+                    marginBottom: 14,
+                  }}
+                >
+                  {error}
+                </div>
+              )}
 
               <Input
-                label="Email / Mobile number"
+                label="Email"
                 value={form.identity}
-                placeholder="Enter email or mobile number"
+                placeholder="Enter email"
                 onChange={(e) =>
                   setForm({
                     ...form,
@@ -150,11 +177,7 @@ export default function EmployeeLogin() {
                     password: e.target.value,
                   })
                 }
-                rightElement={
-                  <Link to="/forgot-password">
-                    Forgot Password?
-                  </Link>
-                }
+                rightElement={<Link to="/forgot-password">Forgot Password?</Link>}
               />
 
               <label className="auth-check">
@@ -172,89 +195,52 @@ export default function EmployeeLogin() {
                 <span>Remember me</span>
               </label>
 
-              <Button type="submit">
-                <span>Log in</span>
+              <Button type="submit" disabled={loading}>
+                <span>{loading ? "Logging in..." : "Log in"}</span>
                 <ArrowRight size={15} />
               </Button>
-
             </form>
-
 
             <div className="auth-divider">
               <span>OR</span>
             </div>
 
-
             <div className="auth-otp-options">
-
-              <Button
-                variant="outline"
-                onClick={() => navigate("/email-otp")}
-              >
+              <Button variant="outline" onClick={() => navigate("/email-otp")}>
                 <Mail size={16} />
 
-                <span>
-                  Login via Email OTP
-                </span>
+                <span>Login via Email OTP</span>
               </Button>
 
-
-              <Button
-                variant="outline"
-                onClick={() => navigate("/sms-otp")}
-              >
+              <Button variant="outline" onClick={() => navigate("/sms-otp")}>
                 <MessageSquare size={16} />
 
-                <span>
-                  Login via SMS OTP
-                </span>
+                <span>Login via SMS OTP</span>
               </Button>
-
             </div>
 
-
-            <Link
-              className="auth-centered-link"
-              to="/account-locked"
-            >
+            <Link className="auth-centered-link" to="/account-locked">
               Account locked?
             </Link>
-
           </AuthCard>
 
-
           <div className="auth-signup">
-            Don't have an account?{" "}
-            <a
-              href="/Signup"
-               onClick={() => navigate("/Signup")}
-            >
-              Sign Up
-            </a>
+            Don't have an account? <Link to="/Signup">Sign Up</Link>
           </div>
-
 
           <div className="auth-help">
             <span>Need help?</span>
 
-            <strong>
-              +91 90000 00000
-            </strong>
+            <strong>+91 90000 00000</strong>
 
-            <small>
-              Monday to Friday · 11:00 AM – 5:00 PM
-            </small>
+            <small>Monday to Friday · 11:00 AM – 5:00 PM</small>
           </div>
-
 
           <div className="auth-footer">
             © {new Date().getFullYear()} LabLIMS
           </div>
-
         </div>
-
       </section>
-
     </div>
   );
 }

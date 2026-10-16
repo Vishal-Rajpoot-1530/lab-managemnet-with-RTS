@@ -17,11 +17,12 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
-    "bcryptjs": "latest",
+    "bcryptjs": "^3.0.3",
     "cors": "latest",
     "dotenv": "^18.0.3",
     "express": "latest",
-    "jsonwebtoken": "latest"
+    "express-rate-limit": "^8.7.1",
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
