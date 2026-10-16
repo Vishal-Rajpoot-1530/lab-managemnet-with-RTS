@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search, Plus, UserRound, Pencil, Trash2, X, Check, Star, ShieldCheck } from "lucide-react";
 import { initialSignatures } from "./usgData";
-import "./usg.css";
-
+import "./signatures.css";
 const blankSignature = {
   name: "",
   role: "Radiologist",

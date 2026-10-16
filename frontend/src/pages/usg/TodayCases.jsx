@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search, RefreshCw, CalendarDays, FileText, Clock, CheckCircle2, Activity, Eye, Pencil, X, AlertCircle } from "lucide-react";
 import { demoCases } from "./usgData";
-import "./usg.css";
+import "./todayCases.css";
 
 export default function TodayCases() {
   const [cases, setCases] = useState(demoCases);

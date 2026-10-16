@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search, Plus, FileText, Pencil, Trash2, X, Check, Power } from "lucide-react";
 import { initialTemplates } from "./usgData";
-import "./usg.css";
+import "./USGTemplates.css";
 
 const blankTemplate = { name: "", category: "General", description: "", active: true };
 
