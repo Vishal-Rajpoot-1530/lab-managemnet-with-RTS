@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { MENU } from '../../constants/menu';
+import { MENU } from "../constants/menu";
 
 import {
   Plus,
@@ -27,6 +27,7 @@ const icons = {
   'Digital X-ray': Scan,
   Manage: Users,
 };
+
 
 export default function Sidebar() {
   const { pathname } = useLocation();

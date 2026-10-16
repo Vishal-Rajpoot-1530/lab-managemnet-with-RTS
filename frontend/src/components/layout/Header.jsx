@@ -238,11 +238,7 @@ export default function Header() {
           </Dropdown>
         </div>
 
-        {/* WATCH VIDEO */}
-        <button className="watch">
-          <Play />
-          Watch Video
-        </button>
+        
 
         {/* NOTIFICATIONS */}
         <div
