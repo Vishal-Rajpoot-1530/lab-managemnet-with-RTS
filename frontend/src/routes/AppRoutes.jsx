@@ -3,6 +3,14 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import Landing from "../pages/LandingPage/Landing.jsx";
 
+
+import {
+  LabSettings,
+  ReportSettings,
+  BillingSettings,
+  NotificationSettings,
+} from "../components/header/SettingsPages.jsx";
+
 // =========================
 // AUTH
 // =========================
@@ -74,6 +82,9 @@ import XraySearch from "../pages/xray/SearchCases.jsx";
 import XrayTemplates from "../pages/xray/ReportTemplates.jsx";
 import XraySignatures from "../pages/xray/Signatures.jsx";
 
+
+import HelpCenter from "../components/header/HelpCenter";
+import ContactSupport from "../components/header/ContactSupport";
 // =========================
 // MANAGE
 // =========================
@@ -148,6 +159,9 @@ export default function AppRoutes() {
           element={<Activities />}
         />
 
+        <Route path="/help-center" element={<HelpCenter />} />
+        <Route path="/contact-support" element={<ContactSupport />}/>
+
         <Route
           path="/business/referral"
           element={<ReferralBusiness />}
@@ -157,6 +171,15 @@ export default function AppRoutes() {
           path="/business/case-wise"
           element={<CaseWiseReport />}
         />
+       
+       <Route path="/settings/lab" element={<LabSettings />} />
+<Route path="/settings/reports" element={<ReportSettings />} />
+<Route path="/settings/billing" element={<BillingSettings />} />
+<Route
+  path="/settings/notifications"
+  element={<NotificationSettings />}
+/>
+      
 
         <Route
           path="/business/analysis"

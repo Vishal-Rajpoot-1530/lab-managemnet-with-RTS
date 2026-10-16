@@ -1,25 +1,28 @@
+import { useNavigate } from "react-router-dom";
 import {
   CircleHelp,
   Headphones,
-  Keyboard,
 } from "lucide-react";
 
 export default function HelpDropdown() {
+  const navigate = useNavigate();
+
   return (
     <div className="simple-menu">
-      <button>
+      <button
+        type="button"
+        onClick={() => navigate("/help-center")}
+      >
         <CircleHelp size={17} />
         <span>Help centre</span>
       </button>
 
-      <button>
+      <button
+        type="button"
+        onClick={() => navigate("/contact-support")}
+      >
         <Headphones size={17} />
         <span>Contact support</span>
-      </button>
-
-      <button>
-        <Keyboard size={17} />
-        <span>Keyboard shortcuts</span>
       </button>
     </div>
   );

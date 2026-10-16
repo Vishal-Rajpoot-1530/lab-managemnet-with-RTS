@@ -1,0 +1,213 @@
+
+.settings-page {
+  min-height: 100%;
+  padding: 30px;
+  color: #17233d;
+  background: #f5f7fc;
+}
+
+.settings-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 24px;
+  color: #77839a;
+  font-size: 13px;
+}
+
+.settings-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.settings-heading-icon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  place-items: center;
+  color: #4d5fd0;
+  background: #e9edff;
+  border-radius: 15px;
+}
+
+.settings-heading h1 {
+  margin: 0 0 7px;
+  font-size: 27px;
+  font-weight: 750;
+  letter-spacing: -0.6px;
+}
+
+.settings-heading p,
+.settings-card-heading p {
+  margin: 0;
+  color: #7b879b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.settings-card {
+  max-width: 1000px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e7eaf2;
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgb(30 49 95 / 5%);
+}
+
+.settings-card-heading {
+  padding: 25px 28px;
+  border-bottom: 1px solid #edf0f6;
+}
+
+.settings-card-heading h2 {
+  margin: 0 0 7px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.settings-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 23px;
+  padding: 28px;
+}
+
+.settings-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  color: #35425b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-field-wide {
+  grid-column: 1 / -1;
+}
+
+.settings-field input:not([type="checkbox"]),
+.settings-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 45px;
+  padding: 11px 13px;
+  color: #24314a;
+  background: #fbfcff;
+  border: 1px solid #dfe4ef;
+  border-radius: 10px;
+  outline: none;
+  font: inherit;
+  font-weight: 400;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.settings-field input:focus,
+.settings-field select:focus {
+  border-color: #6375e5;
+  box-shadow: 0 0 0 3px rgb(99 117 229 / 12%);
+}
+
+.settings-field input::placeholder {
+  color: #a4adbd;
+}
+
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 45px;
+  padding: 0 13px;
+  background: #fbfcff;
+  border: 1px solid #e4e8f1;
+  border-radius: 10px;
+}
+
+.settings-toggle-text {
+  color: #758198;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.settings-toggle {
+  width: 38px;
+  height: 20px;
+  accent-color: #5869d9;
+  cursor: pointer;
+}
+
+.settings-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px 28px;
+  border-top: 1px solid #edf0f6;
+}
+
+.settings-save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 43px;
+  padding: 0 19px;
+  color: #fff;
+  background: linear-gradient(135deg, #6375e5, #4958c4);
+  border: 0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.settings-save-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgb(79 96 205 / 23%);
+}
+
+.settings-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #21845b;
+  font-size: 12px;
+}
+
+@media (max-width: 650px) {
+  .settings-page {
+    padding: 20px 14px;
+  }
+
+  .settings-heading h1 {
+    font-size: 22px;
+  }
+
+  .settings-fields {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .settings-field-wide {
+    grid-column: auto;
+  }
+
+  .settings-card-heading,
+  .settings-card-footer {
+    padding: 20px;
+  }
+
+  .settings-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-save-btn {
+    width: 100%;
+  }
+}

@@ -148,7 +148,7 @@ const EMPTY_INVESTIGATION_PAYMENTS = () =>
       key,
       {
         paid: "",
-        discount: 0,
+        discount: "0",
       },
     ]),
   );
@@ -172,6 +172,20 @@ const getInvestigationTitle = (key) => {
 
   return titles[key] || "Investigations";
 };
+
+// Tests available in the "Select Investigation" dropdown.
+const INVESTIGATION_TESTS = [
+  { id: "abg", name: "ABG", price: 100 },
+  { id: "ada", name: "ADA", price: 100 },
+  { id: "aec", name: "AEC", price: 100 },
+  { id: "afb", name: "AFB", price: 100 },
+  { id: "afp", name: "AFP", price: 100 },
+  { id: "amylase", name: "Amylase", price: 250 },
+  { id: "bilirubin", name: "Bilirubin", price: 150 },
+  { id: "cbc", name: "CBC", price: 200 },
+  { id: "creatinine", name: "Creatinine", price: 120 },
+  { id: "crp", name: "CRP", price: 300 },
+];
 
 const normalizeTests = (tests, prefix) => {
   if (!Array.isArray(tests)) return [];
@@ -1134,17 +1148,17 @@ export default function NewBill() {
               key={key}
               modality={key}
               rows={investigations[key] || []}
-              payment={investigationPayments[key] || { paid: "", discount: 0 }}
+              payment={investigationPayments[key] || { paid: "", discount: "0" }}
               onPaymentChange={(field, value) =>
                 updateInvestigationPayment(key, field, value)
               }
+              onSelect={(test) => addTest(key, test)}
               add={() => {
                 setSelectedModality(key);
                 setModal("test");
               }}
               remove={(id) => removeTest(key, id)}
               removeSection={() => toggleModality(key)}
-              setSelectedModality={setSelectedModality}
               openRateList={() => {
                 setSelectedModality(key);
                 setModal("ratelist");
@@ -1348,6 +1362,7 @@ function Pay({ label, value, set, plain, red }) {
     </div>
   );
 }
+
 function Investigation({
   modality,
   rows,
@@ -1356,93 +1371,45 @@ function Investigation({
   removeSection,
   payment,
   onPaymentChange,
+  onSelect,
   openRateList,
 }) {
-  // Available investigation tests
-  const investigationTests = [
-    { id: "abg", name: "ABG", price: 100 },
-    { id: "ada", name: "ADA", price: 100 },
-    { id: "aec", name: "AEC", price: 100 },
-    { id: "afb", name: "AFB", price: 100 },
-    { id: "afp", name: "AFP", price: 100 },
-    { id: "amylase", name: "Amylase", price: 250 },
-    { id: "bilirubin", name: "Bilirubin", price: 150 },
-    { id: "cbc", name: "CBC", price: 200 },
-    { id: "creatinine", name: "Creatinine", price: 120 },
-    { id: "crp", name: "CRP", price: 300 },
-  ];
+  // The parent owns the list of tests; there is no local copy to go out of sync.
+  const selectedTests = rows ?? [];
 
-  /*
-   * Initialize state: use passed rows if available, otherwise default to an empty list.
-   */
-  const [selectedTests, setSelectedTests] = useState(rows ?? []);
-
-  /*
-   * Keep selectedTests in sync if parent updates the rows prop.
-   */
-  useEffect(() => {
-    if (rows) {
-      setSelectedTests(rows);
-    }
-  }, [rows]);
-
-  /*
-   * Calculate total
-   */
   const sum = selectedTests.reduce(
     (total, test) => total + getNumericValue(test.price),
-    0
+    0,
   );
 
-  /*
-   * Payment values
-   */
   const paid = getNumericValue(payment?.paid);
   const testDiscount = getNumericValue(payment?.discount);
-
-  /*
-   * Due amount
-   */
   const due = Math.max(0, sum - paid - testDiscount);
 
-  /*
-   * Select another investigation directly.
-   */
+  // Pick a test from the dropdown and hand it to the parent.
   const handleSelectTest = (event) => {
     const selectedId = event.target.value;
 
     if (!selectedId) return;
 
-    const selectedTest = investigationTests.find(
-      (test) => test.id === selectedId
+    const selectedTest = INVESTIGATION_TESTS.find(
+      (test) => test.id === selectedId,
     );
 
     if (!selectedTest) return;
 
-    // Prevent duplicate test selection
+    // Added tests get a generated id in the parent, so compare by name.
     const alreadyExists = selectedTests.some(
-      (test) => test.id === selectedTest.id
+      (test) => test.name === selectedTest.name,
     );
 
     if (!alreadyExists) {
-      setSelectedTests((prev) => [...prev, selectedTest]);
+      onSelect?.({ name: selectedTest.name, price: selectedTest.price });
     }
-
-    // Reset dropdown value after selection
-    event.target.value = "";
   };
 
-  /*
-   * Remove investigation from the displayed list
-   */
   const handleRemoveTest = (testId) => {
-    setSelectedTests((prev) =>
-      prev.filter((test) => test.id !== testId)
-    );
-
-    if (remove) {
-      remove(testId);
-    }
+    remove?.(testId);
   };
 
   return (
@@ -1468,15 +1435,16 @@ function Investigation({
 
             {/* INVESTIGATION TEST LIST */}
             <div className="nb-tests">
-              {/* Dropdown */}
+              {/* Controlled with value="" so it always shows the placeholder
+                  again after a test has been picked. */}
               <select
                 className="nb-test-select"
-                defaultValue=""
+                value=""
                 onChange={handleSelectTest}
               >
                 <option value="">Select Investigation</option>
 
-                {investigationTests.map((test) => (
+                {INVESTIGATION_TESTS.map((test) => (
                   <option key={test.id} value={test.id}>
                     {test.name} (Rs.{test.price})
                   </option>
@@ -1533,9 +1501,8 @@ function Investigation({
                 </button>
               </div>
             )}
-           </div>
-      
-        
+          </div>
+
           {/* PAID */}
           <div className="nb-invest-payment-field">
             <label htmlFor={`paid-${modality}`}>* Paid</label>
@@ -1544,9 +1511,7 @@ function Investigation({
               type="number"
               min="0"
               value={payment?.paid ?? ""}
-              onChange={(event) =>
-                onPaymentChange("paid", event.target.value)
-              }
+              onChange={(event) => onPaymentChange("paid", event.target.value)}
             />
           </div>
 

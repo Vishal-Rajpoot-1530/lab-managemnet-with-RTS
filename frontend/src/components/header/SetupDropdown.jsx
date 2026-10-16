@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import {
   FlaskConical,
   FileText,
@@ -6,27 +7,43 @@ import {
 } from "lucide-react";
 
 export default function SetupDropdown() {
+  const navigate = useNavigate();
+
+  const settings = [
+    {
+      label: "Lab settings",
+      path: "/settings/lab",
+      icon: FlaskConical,
+    },
+    {
+      label: "Report settings",
+      path: "/settings/reports",
+      icon: FileText,
+    },
+    {
+      label: "Billing settings",
+      path: "/settings/billing",
+      icon: CreditCard,
+    },
+    {
+      label: "Notification settings",
+      path: "/settings/notifications",
+      icon: Bell,
+    },
+  ];
+
   return (
     <div className="simple-menu">
-      <button>
-        <FlaskConical size={17} />
-        <span>Lab settings</span>
-      </button>
-
-      <button>
-        <FileText size={17} />
-        <span>Report settings</span>
-      </button>
-
-      <button>
-        <CreditCard size={17} />
-        <span>Billing settings</span>
-      </button>
-
-      <button>
-        <Bell size={17} />
-        <span>Notification settings</span>
-      </button>
+      {settings.map(({ label, path, icon: Icon }) => (
+        <button
+          key={path}
+          type="button"
+          onClick={() => navigate(path)}
+        >
+          <Icon size={17} />
+          <span>{label}</span>
+        </button>
+      ))}
     </div>
   );
 }

@@ -403,28 +403,6 @@ export default function Dashboard() {
           {/* SIDEBAR */}
           <aside className="dash-side">
 
-            {/* SMS ALERT */}
-            <div className="dash-alert">
-              <span className="dash-alert-icon">
-                <AlertCircle size={16} />
-              </span>
-
-              <div>
-                <strong>SMS balance is low</strong>
-                <p>
-                  Review your messaging balance before sending
-                  patient notifications.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => navigate("/manage/employees")}
-                aria-label="Open SMS settings"
-              >
-                <ArrowRight size={14} />
-              </button>
-            </div>
 
             {/* DEMO */}
             <div className="dash-demo">
@@ -490,24 +468,6 @@ export default function Dashboard() {
                 Refer a lab
                 <ArrowRight size={15} />
               </button>
-            </div>
-
-            {/* SYSTEM STATUS */}
-            <div className="dash-system">
-              <div className="dash-system-title">
-                <span className="dash-status-dot" />
-                System status
-              </div>
-
-              <div className="dash-system-row">
-                <span>Application</span>
-                <strong>Operational</strong>
-              </div>
-
-              <div className="dash-system-row">
-                <span>Database</span>
-                <strong>Operational</strong>
-              </div>
             </div>
 
             {/* FOOTER LINKS */}
