@@ -122,6 +122,7 @@ export interface Report {
   age: string;
   referrer: string;
   status: string;
+  createdAt?: string; 
   tests: ReportTest[];
   interpretation: string;
   notes: string;

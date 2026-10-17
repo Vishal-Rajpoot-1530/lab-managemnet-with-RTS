@@ -98,6 +98,8 @@ import ReferralProgram from "../pages/manage/ReferralProgram.jsx";
 import EmailPreferences from "../pages/manage/EmailPreferences.jsx";
 import RequireAuth from "../components/common/RequireAuth.jsx";
 
+import LabReport from "../pages/lab/LabReport.jsx";
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -331,6 +333,8 @@ export default function AppRoutes() {
             path="/usg/today"
             element={<UsgToday />}
           />
+
+          <Route path="/lab/reports/bill/:billId" element={<LabReport />} />
 
           <Route
             path="/usg/search"

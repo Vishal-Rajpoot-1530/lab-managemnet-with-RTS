@@ -10,7 +10,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:setup": "prisma db push && npm run db:seed"
+    "db:setup": "mysql -u root -p --default-character-set=utf8mb4 -e \"source database/labSchema.sql\""
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

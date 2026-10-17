@@ -44,9 +44,9 @@ function formatTime(value) {
   return Number.isNaN(date.getTime())
     ? "—"
     : date.toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 }
 
 function money(value) {
@@ -118,13 +118,13 @@ export default function BillDetails() {
   const investigations = Array.isArray(rawInvestigations)
     ? rawInvestigations
     : [
-        ...(Array.isArray(rawInvestigations?.lab)
-          ? rawInvestigations.lab
-          : []),
-        ...(Array.isArray(rawInvestigations?.outsource)
-          ? rawInvestigations.outsource
-          : []),
-      ];
+      ...(Array.isArray(rawInvestigations?.lab)
+        ? rawInvestigations.lab
+        : []),
+      ...(Array.isArray(rawInvestigations?.outsource)
+        ? rawInvestigations.outsource
+        : []),
+    ];
 
   const patientName =
     bill.patientName ||
@@ -392,11 +392,7 @@ export default function BillDetails() {
 
             <button
               className="bill-action-button"
-              onClick={() =>
-                window.alert(
-                  "Bill modification is not connected yet."
-                )
-              }
+              onClick={() => navigate(`/cases/bills/${bill.id}/modify`)}
             >
               <Pencil size={13} />
               Modify
@@ -404,11 +400,7 @@ export default function BillDetails() {
 
             <button
               className="bill-action-button"
-              onClick={() =>
-                window.alert(
-                  "The lab report page is not connected yet."
-                )
-              }
+              onClick={() => navigate(`/lab/reports/bill/${bill.id}`)}
             >
               <Eye size={13} />
               View lab report
@@ -566,107 +558,106 @@ export default function BillDetails() {
 
         {/* RIGHT: Compact sidebar */}
         {/* RIGHT: Sidebar matching the reference design */}
-<aside className="bill-patient-sidebar">
-  <div className="bill-sidebar-header">
-    <span>Sidebar</span>
-    <button
-      type="button"
-      className="bill-sidebar-toggle"
-      title="Collapse sidebar"
-      onClick={(event) => {
-        event.currentTarget
-          .closest(".bill-patient-sidebar")
-          .classList.toggle("bill-sidebar-collapsed");
-      }}
-    >
-      <ArrowLeft size={13} />
-    </button>
-  </div>
+        <aside className="bill-patient-sidebar">
+          <div className="bill-sidebar-header">
+            <span>Sidebar</span>
+            <button
+              type="button"
+              className="bill-sidebar-toggle"
+              title="Collapse sidebar"
+              onClick={(event) => {
+                event.currentTarget
+                  .closest(".bill-patient-sidebar")
+                  .classList.toggle("bill-sidebar-collapsed");
+              }}
+            >
+              <ArrowLeft size={13} />
+            </button>
+          </div>
 
-  <div className="bill-sidebar-items">
-    <div className="bill-sidebar-item">
-      <div className="bill-sidebar-icon patient-icon">
-        <UserRound size={15} />
-      </div>
+          <div className="bill-sidebar-items">
+            <div className="bill-sidebar-item">
+              <div className="bill-sidebar-icon patient-icon">
+                <UserRound size={15} />
+              </div>
 
-      <span className="bill-sidebar-label">Patient info</span>
+              <span className="bill-sidebar-label">Patient info</span>
 
-      <button
-        type="button"
-        className="bill-sidebar-action"
-        title="Edit patient information"
-        onClick={() =>
-          window.alert("Patient information editing is not connected yet.")
-        }
-      >
-        <Pencil size={12} />
-      </button>
+              <button
+                type="button"
+                className="bill-sidebar-action"
+                title="Edit patient information"
+                onClick={() =>
+                  window.alert("Patient information editing is not connected yet.")
+                }
+              >
+                <Pencil size={12} />
+              </button>
 
-      <button
-        type="button"
-        className="bill-sidebar-action"
-        title="View patient information"
-        onClick={() =>
-          window.alert(
-            `${patientName}\nMobile: ${mobile || "—"}\nUHID: ${
-              bill.uhid || patient.uhid || "—"
-            }`
-          )
-        }
-      >
-        <Eye size={12} />
-      </button>
-    </div>
+              <button
+                type="button"
+                className="bill-sidebar-action"
+                title="View patient information"
+                onClick={() =>
+                  window.alert(
+                    `${patientName}\nMobile: ${mobile || "—"}\nUHID: ${bill.uhid || patient.uhid || "—"
+                    }`
+                  )
+                }
+              >
+                <Eye size={12} />
+              </button>
+            </div>
 
-    <div className="bill-sidebar-item">
-      <div className="bill-sidebar-icon doctor-icon">
-        <UserRound size={15} />
-      </div>
+            <div className="bill-sidebar-item">
+              <div className="bill-sidebar-icon doctor-icon">
+                <UserRound size={15} />
+              </div>
 
-      <span className="bill-sidebar-label">Doctor info</span>
+              <span className="bill-sidebar-label">Doctor info</span>
 
-      <button
-        type="button"
-        className="bill-sidebar-action"
-        title="View doctor information"
-        onClick={() =>
-          window.alert(
-            `Referred by: ${bill.referrerName || bill.referrer || "Self"}`
-          )
-        }
-      >
-        <Pencil size={12} />
-      </button>
-    </div>
+              <button
+                type="button"
+                className="bill-sidebar-action"
+                title="View doctor information"
+                onClick={() =>
+                  window.alert(
+                    `Referred by: ${bill.referrerName || bill.referrer || "Self"}`
+                  )
+                }
+              >
+                <Pencil size={12} />
+              </button>
+            </div>
 
-    <div className="bill-sidebar-item">
-      <div className="bill-sidebar-icon history-icon">
-        <History size={15} />
-      </div>
+            <div className="bill-sidebar-item">
+              <div className="bill-sidebar-icon history-icon">
+                <History size={15} />
+              </div>
 
-      <span className="bill-sidebar-label">Patient history</span>
+              <span className="bill-sidebar-label">Patient history</span>
 
-      <button
-        type="button"
-        className="bill-sidebar-action"
-        title="View patient history"
-        onClick={() =>
-          window.alert("Patient history is not connected yet.")
-        }
-      >
-        <Pencil size={12} />
-      </button>
-    </div>
+              <button
+                type="button"
+                className="bill-sidebar-action"
+                title="View patient history"
+                onClick={() =>
+                  window.alert("Patient history is not connected yet.")
+                }
+              >
+                <Pencil size={12} />
+              </button>
+            </div>
 
-    <div className="bill-sidebar-item">
-      <div className="bill-sidebar-icon reports-icon">
-        <FileText size={15} />
-      </div>
+            <div className="bill-sidebar-item">
+              <div className="bill-sidebar-icon reports-icon">
+                <FileText size={15} />
+              </div>
 
-      <span className="bill-sidebar-label">Recent lab reports</span>
-    </div>
-  </div>
-</aside>
+              <span className="bill-sidebar-label">Recent lab reports</span>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );
