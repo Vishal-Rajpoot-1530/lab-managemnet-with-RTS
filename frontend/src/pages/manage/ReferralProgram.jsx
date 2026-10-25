@@ -1,461 +1,166 @@
+
 import { useEffect, useState } from "react";
-import {
-  Gift,
-  Copy,
-  Users,
-  CheckCircle2,
-  IndianRupee,
-  Share2,
-  Sparkles,
-  ArrowUpRight,
-  Clock3,
-  FlaskConical,
-  TrendingUp,
-} from "lucide-react";
-import { manageRequest } from "./manageApi";
-import {
-  ManageShell,
-  Panel,
-  StatusMessage,
-  useStatus,
-} from "./ManageUI";
-import "./ReferralProgram.css";
+import { referralApi } from "../../api/core/apiAuth";
 
-const initial = {
-  referralCode: "LAB-DEMO001",
-  totalReferrals: 0,
-  successfulReferrals: 0,
-  rewardBalance: 0,
-  referrals: [],
-};
+import "./manage.css";
 
-export default function ReferralProgram() {
-  const [data, setData] = useState(initial);
-  const [loading, setLoading] = useState(true);
-  const { status, success, error, dismiss } = useStatus();
+// ---- Page helpers (kept in this file so no extra shared file is needed) ----
+/** Redirects to /login on 401. Returns true when it did. */
+function handleAuthError(err) {
+  if (err?.status === 401) {
+    window.location.assign("/login");
+    return true;
+  }
+  return false;
+}
 
+function useToast() {
+  const [message, setMessage] = useState("");
   useEffect(() => {
-    let active = true;
+    if (!message) return undefined;
+    const timer = setTimeout(() => setMessage(""), 4000);
+    return () => clearTimeout(timer);
+  }, [message]);
+  return [message, setMessage];
+}
 
-    manageRequest("/referrals")
-      .then((result) => {
-        if (active) {
-          const referral = result.referral || result;
-
-          setData({
-            ...initial,
-            ...referral,
-            referrals: Array.isArray(referral.referrals)
-              ? referral.referrals
-              : [],
-          });
-        }
-      })
-      .catch(() => {
-        if (active) {
-          error("Unable to load referral information. Please refresh the page.");
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  async function copyText(text, message) {
-    try {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error("Clipboard unavailable");
-      }
-
-      await navigator.clipboard.writeText(text);
-      success(message);
-    } catch {
-      error("Could not copy. Please check your browser permissions.");
-    }
-  }
-
-  async function copyCode() {
-    await copyText(data.referralCode, "Referral code copied successfully.");
-  }
-
-  async function shareCode() {
-    const text = `Join LabLIMS using my referral code: ${data.referralCode}`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "LabLIMS referral",
-          text,
-        });
-      } else {
-        await copyText(text, "Referral message copied successfully.");
-      }
-    } catch (err) {
-      if (err.name !== "AbortError") {
-        error("Unable to share right now. Please try again.");
-      }
-    }
-  }
-
-  const total = Number(data.totalReferrals) || 0;
-  const successful = Number(data.successfulReferrals) || 0;
-  const rewards = Number(data.rewardBalance) || 0;
-  const pending = Math.max(total - successful, 0);
-  const conversion = total > 0
-    ? Math.min((successful / total) * 100, 100)
-    : 0;
-
-  const stats = [
-    {
-      label: "Total referrals",
-      value: total.toLocaleString("en-IN"),
-      detail: "Laboratories invited",
-      icon: Users,
-      tone: "purple",
-    },
-    {
-      label: "Successful sign-ups",
-      value: successful.toLocaleString("en-IN"),
-      detail: "Completed registrations",
-      icon: CheckCircle2,
-      tone: "green",
-    },
-    {
-      label: "Reward balance",
-      value: `₹${rewards.toLocaleString("en-IN")}`,
-      detail: "Rewards recorded",
-      icon: IndianRupee,
-      tone: "orange",
-    },
-  ];
-
-  function getStatusClass(value) {
-    const normalized = String(value || "Pending").toLowerCase();
-
-    if (
-      normalized.includes("success") ||
-      normalized.includes("complete") ||
-      normalized.includes("approved")
-    ) {
-      return "referral-status-success";
-    }
-
-    if (
-      normalized.includes("reject") ||
-      normalized.includes("fail") ||
-      normalized.includes("cancel")
-    ) {
-      return "referral-status-failed";
-    }
-
-    return "referral-status-pending";
-  }
-
+function Toast({ message, onClose }) {
+  if (!message) return null;
   return (
-    <ManageShell
-      title="Referral Program"
-      subtitle="Invite laboratories to LabLIMS and track your referral activity."
-      icon={Gift}
-    >
-      <div className="referral-page">
-        <StatusMessage status={status} onDismiss={dismiss} />
-
-        <section className="referral-hero">
-          <div className="referral-hero-decoration referral-decoration-one" />
-          <div className="referral-hero-decoration referral-decoration-two" />
-
-          <div className="referral-hero-content">
-            <div className="referral-eyebrow">
-              <Sparkles size={15} />
-              LABLIMS REWARDS
-            </div>
-
-            <h2>Good connections deserve rewards.</h2>
-
-            <p className="referral-hero-description">
-              Know a laboratory that could benefit from LabLIMS?
-              Share your referral code and keep track of your invitations
-              in one place.
-            </p>
-
-            <div className="referral-code-label">YOUR UNIQUE REFERRAL CODE</div>
-
-            <div className="referral-code-box">
-              <span className="referral-code-value">
-                {data.referralCode || "Not available"}
-              </span>
-
-              <button
-                type="button"
-                className="referral-copy-icon"
-                onClick={copyCode}
-                disabled={!data.referralCode}
-                aria-label="Copy referral code"
-                title="Copy referral code"
-              >
-                <Copy size={18} />
-              </button>
-            </div>
-
-            <div className="referral-hero-actions">
-              <button
-                type="button"
-                className="referral-button referral-button-light"
-                onClick={copyCode}
-                disabled={!data.referralCode}
-              >
-                <Copy size={17} />
-                Copy referral code
-              </button>
-
-              <button
-                type="button"
-                className="referral-button referral-button-outline"
-                onClick={shareCode}
-                disabled={!data.referralCode}
-              >
-                <Share2 size={17} />
-                Share invitation
-                <ArrowUpRight size={16} />
-              </button>
-            </div>
-          </div>
-
-          <div className="referral-hero-art" aria-hidden="true">
-            <div className="referral-art-circle referral-art-circle-back" />
-            <div className="referral-art-circle referral-art-circle-front" />
-            <div className="referral-art-card">
-              <div className="referral-art-icon">
-                <Gift size={34} />
-              </div>
-              <span className="referral-art-title">Invite. Connect.</span>
-              <span className="referral-art-subtitle">Grow together.</span>
-              <div className="referral-art-divider" />
-              <div className="referral-art-people">
-                <span><Users size={17} /></span>
-                <span><FlaskConical size={17} /></span>
-                <span><CheckCircle2 size={17} /></span>
-              </div>
-            </div>
-            <div className="referral-art-sparkle referral-art-sparkle-one">✦</div>
-            <div className="referral-art-sparkle referral-art-sparkle-two">✧</div>
-          </div>
-        </section>
-
-        <section className="referral-stats-grid" aria-label="Referral statistics">
-          {stats.map(({ label, value, detail, icon: Icon, tone }) => (
-            <article className="referral-stat-card" key={label}>
-              <div className="referral-stat-top">
-                <span className="referral-stat-label">{label}</span>
-                <span className={`referral-stat-icon ${tone}`}>
-                  <Icon size={21} />
-                </span>
-              </div>
-
-              <div className="referral-stat-value">{value}</div>
-              <div className="referral-stat-detail">{detail}</div>
-            </article>
-          ))}
-        </section>
-
-        <section className="referral-middle-grid">
-          <Panel
-            title="Referral performance"
-            description="A quick look at your invitation progress."
-          >
-            <div className="referral-performance">
-              <div className="referral-performance-header">
-                <div className="referral-performance-icon">
-                  <TrendingUp size={20} />
-                </div>
-                <div>
-                  <div className="referral-performance-title">
-                    Sign-up conversion
-                  </div>
-                  <div className="referral-performance-subtitle">
-                    Successful referrals compared with total referrals
-                  </div>
-                </div>
-              </div>
-
-              <div className="referral-progress-heading">
-                <span>Conversion rate</span>
-                <strong>{conversion.toFixed(0)}%</strong>
-              </div>
-
-              <div
-                className="referral-progress-track"
-                role="progressbar"
-                aria-label="Referral conversion rate"
-                aria-valuenow={Math.round(conversion)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="referral-progress-fill"
-                  style={{ width: `${conversion}%` }}
-                />
-              </div>
-
-              <div className="referral-performance-footer">
-                <span>
-                  <CheckCircle2 size={15} />
-                  {successful} successful
-                </span>
-                <span>
-                  <Clock3 size={15} />
-                  {pending} remaining
-                </span>
-              </div>
-            </div>
-          </Panel>
-
-          <aside className="referral-tip-card">
-            <div className="referral-tip-icon">
-              <Gift size={22} />
-            </div>
-            <span className="referral-tip-kicker">REFERRAL TIP</span>
-            <h3>Spread the word.</h3>
-            <p>
-              Share your code with laboratory owners and teams who may find
-              LabLIMS useful for managing their laboratory operations.
-            </p>
-            <button
-              type="button"
-              className="referral-tip-action"
-              onClick={shareCode}
-              disabled={!data.referralCode}
-            >
-              Share your code
-              <ArrowUpRight size={16} />
-            </button>
-            <p className="referral-tip-note">
-              Rewards are subject to your organization&apos;s referral program
-              rules and eligibility requirements.
-            </p>
-          </aside>
-        </section>
-
-        <Panel
-          title="Referral history"
-          description="Review laboratories associated with your referral code."
-        >
-          <div className="referral-history">
-            {loading ? (
-              <div className="referral-empty-state">
-                <div className="referral-loading-spinner" />
-                <p>Loading referral history...</p>
-              </div>
-            ) : data.referrals.length > 0 ? (
-              <div className="referral-table-wrapper">
-                <table className="referral-table">
-                  <thead>
-                    <tr>
-                      <th>Laboratory</th>
-                      <th>Referral date</th>
-                      <th>Status</th>
-                      <th>Reward</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.referrals.map((item, index) => {
-                      const itemStatus = item.status || "Pending";
-
-                      return (
-                        <tr key={item.id || index}>
-                          <td>
-                            <div className="referral-lab-cell">
-                              <span className="referral-lab-avatar">
-                                <FlaskConical size={17} />
-                              </span>
-                              <div className="referral-lab-details">
-                                <strong>
-                                  {item.labName ||
-                                    item.name ||
-                                    item.email ||
-                                    "Referred laboratory"}
-                                </strong>
-                                {item.email &&
-                                  item.labName &&
-                                  item.email !== item.labName && (
-                                    <span>{item.email}</span>
-                                  )}
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            {item.createdAt
-                              ? new Date(item.createdAt).toLocaleDateString(
-                                  "en-IN",
-                                  {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  }
-                                )
-                              : "—"}
-                          </td>
-                          <td>
-                            <span
-                              className={`referral-status-pill ${getStatusClass(
-                                itemStatus
-                              )}`}
-                            >
-                              <span className="referral-status-dot" />
-                              {itemStatus}
-                            </span>
-                          </td>
-                          <td className="referral-reward-cell">
-                            {item.reward == null
-                              ? "—"
-                              : `₹${Number(item.reward).toLocaleString("en-IN")}`}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="referral-empty-state">
-                <div className="referral-empty-icon">
-                  <Users size={27} />
-                </div>
-                <h3>No referrals yet</h3>
-                <p>
-                  Your referral activity will appear here when laboratories
-                  start registering through your invitations.
-                </p>
-                <button
-                  type="button"
-                  className="referral-empty-button"
-                  onClick={shareCode}
-                  disabled={!data.referralCode}
-                >
-                  <Share2 size={16} />
-                  Invite your first laboratory
-                </button>
-              </div>
-            )}
-          </div>
-        </Panel>
-
-        <div className="referral-page-footnote">
-          <ShieldCheckIcon />
-          <span>
-            Your referral statistics and reward balance reflect the information
-            returned by your LabLIMS backend.
-          </span>
-        </div>
-      </div>
-    </ManageShell>
+    <div className="employee-toast" role="status">
+      <span>{message}</span>
+      <button type="button" onClick={onClose} aria-label="Dismiss notification">×</button>
+    </div>
   );
 }
 
-function ShieldCheckIcon() {
-  return <CheckCircle2 size={16} />;
+function PageShell({ title, description, actions, children }) {
+  return (
+    <main className="employee-page">
+      <div className="employee-container">
+        <header className="employee-header">
+          <div>
+            <h1>{title}</h1>
+            {description && <p>{description}</p>}
+          </div>
+          {actions}
+        </header>
+        {children}
+      </div>
+    </main>
+  );
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+// ---------------------------------------------------------------------------
+
+const money = (n) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n || 0);
+
+export default function ReferralProgram() {
+  const [data, setData] = useState(null);
+  const [invitee, setInvitee] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const [toast, setToast] = useToast();
+
+  useEffect(() => {
+    referralApi
+      .get()
+      .then(setData)
+      .catch((err) => handleAuthError(err) || setError(err.message));
+  }, []);
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(data.referralCode);
+      setToast("Referral code copied.");
+    } catch {
+      setToast("Copy failed. Select the code and copy it manually.");
+    }
+  }
+
+  async function sendInvite(event) {
+    event.preventDefault();
+    setError("");
+    if (!invitee.trim()) return setError("Enter an email address or lab name.");
+    setSending(true);
+    try {
+      setData(await referralApi.invite(invitee.trim()));
+      setInvitee("");
+      setToast("Invitation sent.");
+    } catch (err) {
+      if (!handleAuthError(err)) setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!data) {
+    return (
+      <PageShell title="Referral program">
+        {error ? <p className="employee-form-error" role="alert">{error}</p> : <p role="status">Loading…</p>}
+      </PageShell>
+    );
+  }
+
+  return (
+    <PageShell title="Referral program" description="Invite other labs and track your rewards.">
+      <section className="employee-stats">
+        <article className="employee-stat-card">
+          <div className="employee-stat-top"><span>Your referral code</span></div>
+          <strong style={{ letterSpacing: 1 }}>{data.referralCode}</strong>
+          <button type="button" className="employee-secondary-btn" onClick={copyCode} style={{ marginTop: 10 }}>Copy code</button>
+        </article>
+        <article className="employee-stat-card">
+          <div className="employee-stat-top"><span>Total referrals</span></div>
+          <strong>{data.totalReferrals}</strong>
+          <small>{data.successfulReferrals} joined</small>
+        </article>
+        <article className="employee-stat-card">
+          <div className="employee-stat-top"><span>Reward balance</span></div>
+          <strong>{money(data.rewardBalance)}</strong>
+          <small>From joined referrals</small>
+        </article>
+      </section>
+
+      <section className="employee-directory" style={{ padding: 24 }}>
+        <h2>Invite a lab</h2>
+        <form onSubmit={sendInvite} style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+          <input className="employee-input" style={{ flex: "1 1 260px" }} value={invitee} maxLength={190}
+            onChange={(e) => setInvitee(e.target.value)} placeholder="Email address or lab name" aria-label="Invitee" />
+          <button type="submit" className="employee-primary-btn" disabled={sending}>{sending ? "Sending…" : "Send invite"}</button>
+        </form>
+        {error && <p className="employee-form-error" role="alert">{error}</p>}
+      </section>
+
+      <section className="employee-directory">
+        <div className="employee-directory-header"><div><h2>Your referrals</h2></div></div>
+        <div className="employee-table-scroll">
+          <table className="employee-table">
+            <thead><tr><th>INVITED</th><th>STATUS</th><th>REWARD</th><th>DATE</th></tr></thead>
+            <tbody>
+              {data.referrals.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.email || r.labName}</td>
+                  <td style={{ textTransform: "capitalize" }}>{r.status}</td>
+                  <td>{r.reward === null ? "—" : money(r.reward)}</td>
+                  <td>{formatDate(r.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {data.referrals.length === 0 && (
+            <div className="employee-empty">
+              <h3>No referrals yet</h3>
+              <p>Send an invite or share your code to get started.</p>
+            </div>
+          )}
+        </div>
+      </section>
+      <Toast message={toast} onClose={() => setToast("")} />
+    </PageShell>
+  );
 }

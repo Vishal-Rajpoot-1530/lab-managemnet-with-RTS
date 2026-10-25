@@ -1,3 +1,4 @@
+
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { User } from "@prisma/client";
@@ -31,17 +32,39 @@ export function publicUser(user: User) {
   };
 }
 
-/** identity = e-mail or mobile number. */
+/**
+ * Doctors are created in doctor_access (Manage > Doctor access), which also
+ * creates their login row. This covers doctors added before that change: the
+ * first successful sign-in creates the missing login row.
+ */
+async function provisionDoctorLogin(email: string, password: string) {
+  const doctor = await prisma.doctorAccess.findUnique({ where: { email } });
+  if (!doctor || !(await bcrypt.compare(password, doctor.passwordHash))) return null;
+
+  return prisma.user.create({
+    data: {
+      name: doctor.name,
+      email: doctor.email,
+      passwordHash: doctor.passwordHash,
+      role: "doctor",
+      active: doctor.active,
+    },
+  });
+}
+
+/** identity = e-mail or mobile number. Employees and doctors use the same form. */
 export async function login(identity: string, password: string, ctx: LoginContext) {
   const value = identity.trim();
   const byEmail = value.includes("@");
   const normalized = byEmail ? value.toLowerCase() : value.replace(/\D/g, "");
 
-  const user = normalized
+  let user = normalized
     ? await prisma.user.findFirst({
         where: byEmail ? { email: normalized } : { mobile: normalized },
       })
     : null;
+
+  if (!user && byEmail) user = await provisionDoctorLogin(normalized, password);
 
   const now = new Date();
 
@@ -101,6 +124,14 @@ export async function login(identity: string, password: string, ctx: LoginContex
       },
     }),
   ]);
+
+  // Shown in Manage > Doctor access.
+  if (user.role === "doctor") {
+    await prisma.doctorAccess.updateMany({
+      where: { email: user.email },
+      data: { lastLoginAt: now },
+    });
+  }
 
   return { token, user: publicUser(user) };
 }
@@ -166,6 +197,14 @@ export async function updateProfile(
         data: { name, email, mobile },
       });
     }
+
+    // Keep a doctor's access row in step with their login.
+    if (user.role === "doctor") {
+      await tx.doctorAccess.updateMany({
+        where: { email: user.email },
+        data: { name, email, mobile },
+      });
+    }
   });
 
   return getProfile(userId);
@@ -191,11 +230,14 @@ export async function changePassword(
     throw new ApiError(400, "WRONG_PASSWORD", "Your current password is incorrect.");
   }
 
+  const passwordHash = await bcrypt.hash(next, 10);
+
   await prisma.$transaction([
-    prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash: await bcrypt.hash(next, 10) },
-    }),
+    prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+    // A doctor's password is stored in both tables; keep them identical.
+    ...(user.role === "doctor"
+      ? [prisma.doctorAccess.updateMany({ where: { email: user.email }, data: { passwordHash } })]
+      : []),
     // Every other browser has to log in again.
     prisma.authSession.updateMany({
       where: { userId, tokenId: { not: sessionId }, revokedAt: null },

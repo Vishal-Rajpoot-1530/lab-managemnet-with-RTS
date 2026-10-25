@@ -1,27 +1,8 @@
 
-import { useMemo, useState } from "react";
-import "./manage.css";
 
-const SEED = [
-  {
-    id: 1,
-    name: "Demo Lab Owner",
-    mobile: "+91 9000000001",
-    email: "owner@example.com",
-    active: true,
-    date: "30 Nov 2024",
-    permission: "Account owner",
-  },
-  {
-    id: 2,
-    name: "Demo Technician",
-    mobile: "+91 9000000002",
-    email: "technician@example.com",
-    active: false,
-    date: "24 Dec 2024",
-    permission: "Configure",
-  },
-];
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { authApi, employeesApi } from "../../api/core/apiAuth";
+import "./manage.css";
 
 const PERMISSIONS = [
   "Account owner",
@@ -30,6 +11,14 @@ const PERMISSIONS = [
   "Reports only",
   "View only",
 ];
+
+// Login roles stored on User.role: "owner" and "admin" may manage employees.
+const canManage = (user) => user && ["owner", "admin"].includes(user.role);
+
+// The directory shows one "access profile" per person: owner, or Employee.role.
+const toRow = (e) => ({ ...e, permission: e.owner ? "Account owner" : e.role || "View only" });
+
+const EMPTY_FORM = { name: "", mobile: "", email: "", password: "", permission: "Configure" };
 
 function Icon({ name, size = 19 }) {
   const shapes = {
@@ -108,6 +97,12 @@ function Icon({ name, size = 19 }) {
       </>
     ),
     check: <path d="m5 12 4 4L19 6" />,
+    lock: (
+      <>
+        <rect x="4" y="11" width="16" height="10" rx="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </>
+    ),
   };
 
   return (
@@ -137,68 +132,92 @@ function initials(name) {
     .toUpperCase();
 }
 
-function today() {
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date());
+  }).format(date);
 }
 
 export default function EmployeeLogin() {
-  const [rows, setRows] = useState(SEED);
+  const [me, setMe] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
   const [tab, setTab] = useState("Active");
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [menuId, setMenuId] = useState(null);
   const [toast, setToast] = useState("");
-
-  const [form, setForm] = useState({
-    name: "",
-    mobile: "",
-    email: "",
-    permission: "Configure",
-  });
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState("");
+
+  const isAdmin = canManage(me);
+
+  const handleApiError = useCallback((err) => {
+    if (err.status === 401) {
+      window.location.assign("/login");
+      return;
+    }
+    setToast(err.message);
+  }, []);
+
+  useEffect(() => {
+    if (!authApi.isLoggedIn()) {
+      window.location.assign("/login");
+      return;
+    }
+    (async () => {
+      try {
+        const { user } = await authApi.me();
+        setMe(user);
+        if (canManage(user)) {
+          const employees = await employeesApi.list();
+          setRows(employees.map(toRow));
+        }
+      } catch (err) {
+        if (err.status === 401) return handleApiError(err);
+        setLoadError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [handleApiError]);
 
   const activeCount = rows.filter((row) => row.active).length;
   const blockedCount = rows.length - activeCount;
 
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
-
     return rows.filter((row) => {
-      const statusMatches = tab === "All" ||
-        (tab === "Active" ? row.active : !row.active);
-
+      const statusMatches =
+        tab === "All" || (tab === "Active" ? row.active : !row.active);
       const searchMatches =
         !query ||
         row.name.toLowerCase().includes(query) ||
         row.email.toLowerCase().includes(query) ||
         row.mobile.toLowerCase().includes(query);
-
       return statusMatches && searchMatches;
     });
   }, [rows, tab, search]);
 
-  function notify(message) {
-    setToast(message);
-  }
+  const notify = (message) => setToast(message);
 
   function openAdd(type) {
-    setForm({
-      name: "",
-      mobile: "",
-      email: "",
-      permission: "Configure",
-    });
+    setForm(EMPTY_FORM);
+    setShowPassword(false);
     setError("");
     setModal(type);
   }
 
-  function submitEmployee(event) {
+  async function submitEmployee(event) {
     event.preventDefault();
     setError("");
 
@@ -206,107 +225,126 @@ export default function EmployeeLogin() {
     const email = form.email.trim().toLowerCase();
     const mobile = form.mobile.trim();
 
-    if (!name || !email || !mobile) {
+    if (!name || !email || !mobile || !form.password) {
       setError("Please complete all required fields.");
       return;
     }
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
-
     if (!/^[+()\d\s-]{7,20}$/.test(mobile)) {
       setError("Please enter a valid mobile number.");
       return;
     }
-
-    if (rows.some((row) => row.email.toLowerCase() === email)) {
-      setError("An employee with this email already exists.");
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
 
-    if (rows.some((row) => row.mobile === mobile)) {
-      setError("An employee with this mobile number already exists.");
-      return;
+    setSaving(true);
+    try {
+      const employee = toRow(
+        await employeesApi.create({
+          name,
+          email,
+          mobile,
+          password: form.password,
+          role: form.permission,
+        })
+      );
+      setRows((current) => [...current, employee]);
+      setTab("Active");
+      setSearch("");
+      setModal(null);
+      notify(
+        modal === "existing"
+          ? "Employee added to this directory."
+          : "Employee added successfully."
+      );
+    } catch (err) {
+      if (err.status === 401) return handleApiError(err);
+      setError(err.message); // e.g. duplicate email, not an admin
+    } finally {
+      setSaving(false);
     }
-
-    const employee = {
-      id:
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random()}`,
-      name,
-      mobile,
-      email,
-      active: true,
-      date: today(),
-      permission: form.permission,
-    };
-
-    setRows((current) => [employee, ...current]);
-    setTab("Active");
-    setSearch("");
-    setModal(null);
-    notify(
-      modal === "existing"
-        ? "Employee added to this directory."
-        : "Employee added successfully."
-    );
   }
 
-  function toggleStatus(employee) {
-    const nextStatus = !employee.active;
-
-    setRows((current) =>
-      current.map((row) =>
-        row.id === employee.id ? { ...row, active: nextStatus } : row
-      )
-    );
-
+  async function toggleStatus(employee) {
     setMenuId(null);
-    notify(
-      nextStatus
-        ? `${employee.name} is now active.`
-        : `${employee.name} has been blocked.`
-    );
+    try {
+      const updated = toRow(await employeesApi.update(employee.id, { active: !employee.active }));
+      setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
+      notify(
+        updated.active
+          ? `${updated.name} is now active.`
+          : `${updated.name} has been blocked.`
+      );
+    } catch (err) {
+      handleApiError(err);
+    }
   }
 
-  function savePermission(event) {
+  async function savePermission(event) {
     event.preventDefault();
-
     if (!selected) return;
-
-    setRows((current) =>
-      current.map((row) =>
-        row.id === selected.id
-          ? { ...row, permission: selected.permission }
-          : row
-      )
-    );
-
-    setModal(null);
-    setSelected(null);
-    notify("Employee permissions updated.");
-  }
-
-  function confirmDelete() {
-    if (!selected) return;
-
-    setRows((current) =>
-      current.filter((row) => row.id !== selected.id)
-    );
-
-    setModal(null);
-    setSelected(null);
-    setMenuId(null);
-    notify("Employee removed from the directory.");
+    setSaving(true);
+    try {
+      const updated = toRow(await employeesApi.update(selected.id, { role: selected.permission }));
+      setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
+      setModal(null);
+      setSelected(null);
+      notify("Employee permissions updated.");
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function openPermissions(employee) {
     setSelected({ ...employee });
     setMenuId(null);
     setModal("permissions");
+  }
+
+  if (loading) {
+    return (
+      <main className="employee-page">
+        <div className="employee-container">
+          <p role="status">Loading employees…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <main className="employee-page">
+        <div className="employee-container">
+          <p role="alert">{loadError}</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <main className="employee-page">
+        <div className="employee-container">
+          <section className="employee-empty">
+            <div className="employee-empty-icon">
+              <Icon name="lock" size={27} />
+            </div>
+            <h3>Administrators only</h3>
+            <p>
+              Only an administrator can add or manage employee logins. Ask your
+              lab administrator for access.
+            </p>
+          </section>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -351,7 +389,7 @@ export default function EmployeeLogin() {
           </div>
           <div className="employee-overview-note">
             <Icon name="users" size={17} />
-            Team account management
+            Signed in as {me.name}
           </div>
         </section>
 
@@ -487,115 +525,108 @@ export default function EmployeeLogin() {
               </thead>
 
               <tbody>
-                {visibleRows.map((employee) => (
-                  <tr key={employee.id}>
-                    <td>
-                      <div className="employee-person">
-                        <div className="employee-avatar">
-                          {initials(employee.name)}
-                        </div>
-                        <div className="employee-person-info">
-                          <strong>{employee.name}</strong>
-                          {employee.permission === "Account owner" && (
-                            <span className="employee-owner-tag">
-                              Account owner
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="employee-mobile">
-                      <Icon name="phone" size={15} />
-                      {employee.mobile}
-                    </td>
-
-                    <td className="employee-email">
-                      <Icon name="mail" size={15} />
-                      {employee.email}
-                    </td>
-
-                    <td>
-                      <span
-                        className={`employee-status ${
-                          employee.active ? "is-active" : "is-blocked"
-                        }`}
-                      >
-                        <span />
-                        {employee.active ? "Active" : "Blocked"}
-                      </span>
-                    </td>
-
-                    <td className="employee-date">{employee.date}</td>
-
-                    <td>
-                      <button
-                        type="button"
-                        className="employee-permission-btn"
-                        onClick={() => openPermissions(employee)}
-                      >
-                        <Icon name="settings" size={15} />
-                        {employee.permission}
-                      </button>
-                    </td>
-
-                    <td>
-                      <div className="employee-action-cell">
-                        <button
-                          type="button"
-                          className="employee-icon-btn"
-                          aria-label={`Actions for ${employee.name}`}
-                          aria-expanded={menuId === employee.id}
-                          onClick={() =>
-                            setMenuId((current) =>
-                              current === employee.id ? null : employee.id
-                            )
-                          }
-                        >
-                          <Icon name="more" size={19} />
-                        </button>
-
-                        {menuId === employee.id && (
-                          <div className="employee-action-menu">
-                            <button
-                              type="button"
-                              onClick={() => openPermissions(employee)}
-                            >
-                              <Icon name="settings" size={16} />
-                              Configure permissions
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => toggleStatus(employee)}
-                            >
-                              <Icon
-                                name={employee.active ? "ban" : "userCheck"}
-                                size={16}
-                              />
-                              {employee.active
-                                ? "Block employee"
-                                : "Reactivate employee"}
-                            </button>
-                            {employee.permission !== "Account owner" && (
-                              <button
-                                type="button"
-                                className="menu-delete"
-                                onClick={() => {
-                                  setSelected(employee);
-                                  setMenuId(null);
-                                  setModal("delete");
-                                }}
-                              >
-                                <Icon name="trash" size={16} />
-                                Remove employee
-                              </button>
+                {visibleRows.map((employee) => {
+                  const isOwner = employee.permission === "Account owner";
+                  const isSelf = employee.email === me.email;
+                  return (
+                    <tr key={employee.id}>
+                      <td>
+                        <div className="employee-person">
+                          <div className="employee-avatar">
+                            {initials(employee.name)}
+                          </div>
+                          <div className="employee-person-info">
+                            <strong>{employee.name}</strong>
+                            {isOwner && (
+                              <span className="employee-owner-tag">
+                                Account owner
+                              </span>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </div>
+                      </td>
+
+                      <td className="employee-mobile">
+                        <Icon name="phone" size={15} />
+                        {employee.mobile}
+                      </td>
+
+                      <td className="employee-email">
+                        <Icon name="mail" size={15} />
+                        {employee.email}
+                      </td>
+
+                      <td>
+                        <span
+                          className={`employee-status ${
+                            employee.active ? "is-active" : "is-blocked"
+                          }`}
+                        >
+                          <span />
+                          {employee.active ? "Active" : "Blocked"}
+                        </span>
+                      </td>
+
+                      <td className="employee-date">{formatDate(employee.createdAt)}</td>
+
+                      <td>
+                        <button
+                          type="button"
+                          className="employee-permission-btn"
+                          onClick={() => openPermissions(employee)}
+                        >
+                          <Icon name="settings" size={15} />
+                          {employee.permission}
+                        </button>
+                      </td>
+
+                      <td>
+                        <div className="employee-action-cell">
+                          {/* The owner and your own account can't be changed (also enforced on the server). */}
+                          {!isOwner && !isSelf && (
+                            <button
+                              type="button"
+                              className="employee-icon-btn"
+                              aria-label={`Actions for ${employee.name}`}
+                              aria-expanded={menuId === employee.id}
+                              onClick={() =>
+                                setMenuId((current) =>
+                                  current === employee.id ? null : employee.id
+                                )
+                              }
+                            >
+                              <Icon name="more" size={19} />
+                            </button>
+                          )}
+
+                          {menuId === employee.id && (
+                            <div className="employee-action-menu">
+                              <button
+                                type="button"
+                                onClick={() => openPermissions(employee)}
+                              >
+                                <Icon name="settings" size={16} />
+                                Configure permissions
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toggleStatus(employee)}
+                              >
+                                <Icon
+                                  name={employee.active ? "ban" : "userCheck"}
+                                  size={16}
+                                />
+                                {employee.active
+                                  ? "Block employee"
+                                  : "Reactivate employee"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -643,9 +674,9 @@ export default function EmployeeLogin() {
         <div className="employee-security-note">
           <Icon name="shield" size={17} />
           <p>
-            <strong>Security reminder:</strong> UI status changes do not
-            automatically block login access. Enforce account status and
-            permissions in your authentication backend.
+            <strong>Access rule:</strong> Only account owners and administrators
+            can add, block, or remove employees. Blocked employees can no longer
+            sign in.
           </p>
         </div>
       </div>
@@ -665,10 +696,7 @@ export default function EmployeeLogin() {
           >
             <div className="employee-modal-top">
               <div className="employee-modal-icon">
-                <Icon
-                  name={modal === "new" ? "userPlus" : "users"}
-                  size={22}
-                />
+                <Icon name={modal === "new" ? "userPlus" : "users"} size={22} />
               </div>
               <button
                 type="button"
@@ -685,7 +713,7 @@ export default function EmployeeLogin() {
             </h2>
             <p className="employee-modal-description">
               {modal === "new"
-                ? "Enter the employee's details and choose their access level."
+                ? "Enter the employee's details, set a password, and choose their access level."
                 : "Enter the existing employee's details to add them to this lab directory."}
             </p>
 
@@ -697,9 +725,7 @@ export default function EmployeeLogin() {
                 id="employee-name"
                 className="employee-input"
                 value={form.name}
-                onChange={(event) =>
-                  setForm({ ...form, name: event.target.value })
-                }
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
                 placeholder="Enter full name"
                 maxLength={100}
                 required
@@ -714,9 +740,7 @@ export default function EmployeeLogin() {
                 className="employee-input"
                 type="tel"
                 value={form.mobile}
-                onChange={(event) =>
-                  setForm({ ...form, mobile: event.target.value })
-                }
+                onChange={(event) => setForm({ ...form, mobile: event.target.value })}
                 placeholder="+91 9876543210"
                 maxLength={20}
                 required
@@ -730,13 +754,49 @@ export default function EmployeeLogin() {
                 className="employee-input"
                 type="email"
                 value={form.email}
-                onChange={(event) =>
-                  setForm({ ...form, email: event.target.value })
-                }
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
                 placeholder="employee@lab.com"
                 maxLength={254}
+                autoComplete="off"
                 required
               />
+
+              <label className="employee-label" htmlFor="employee-password">
+                Password <span>*</span>
+              </label>
+              <div style={{ position: "relative" }}>
+                <input
+                  id="employee-password"
+                  className="employee-input"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(event) => setForm({ ...form, password: event.target.value })}
+                  placeholder="At least 8 characters"
+                  minLength={8}
+                  maxLength={72}
+                  autoComplete="new-password"
+                  style={{ paddingRight: 64 }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: 0,
+                    cursor: "pointer",
+                    fontSize: 13,
+                    color: "inherit",
+                  }}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
 
               <label className="employee-label" htmlFor="employee-permission">
                 Permissions
@@ -745,9 +805,7 @@ export default function EmployeeLogin() {
                 id="employee-permission"
                 className="employee-input"
                 value={form.permission}
-                onChange={(event) =>
-                  setForm({ ...form, permission: event.target.value })
-                }
+                onChange={(event) => setForm({ ...form, permission: event.target.value })}
               >
                 {PERMISSIONS.filter((p) => p !== "Account owner").map((p) => (
                   <option key={p} value={p}>
@@ -765,8 +823,8 @@ export default function EmployeeLogin() {
               <div className="employee-form-note">
                 <Icon name="shield" size={17} />
                 <span>
-                  This demo adds an entry to the local page only. It does not
-                  create credentials or send an invitation.
+                  The employee signs in with this email and password. Share the
+                  password securely and ask them to keep it private.
                 </span>
               </div>
 
@@ -778,9 +836,9 @@ export default function EmployeeLogin() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="employee-primary-btn">
+                <button type="submit" className="employee-primary-btn" disabled={saving}>
                   <Icon name="check" size={17} />
-                  Add employee
+                  {saving ? "Adding…" : "Add employee"}
                 </button>
               </div>
             </form>
@@ -828,24 +886,25 @@ export default function EmployeeLogin() {
                 id="permission-profile"
                 className="employee-input"
                 value={selected.permission}
-                disabled={selected.permission === "Account owner"}
+                disabled={selected.permission === "Account owner" || selected.email === me.email}
                 onChange={(event) =>
-                  setSelected({
-                    ...selected,
-                    permission: event.target.value,
-                  })
+                  setSelected({ ...selected, permission: event.target.value })
                 }
               >
-                {PERMISSIONS.map((permission) => (
+                {PERMISSIONS.filter(
+                  (p) => p !== "Account owner" || selected.permission === "Account owner"
+                ).map((permission) => (
                   <option key={permission} value={permission}>
                     {permission}
                   </option>
                 ))}
               </select>
 
-              {selected.permission === "Account owner" && (
+              {(selected.permission === "Account owner" || selected.email === me.email) && (
                 <p className="employee-form-hint">
-                  The account owner's role cannot be changed from this screen.
+                  {selected.permission === "Account owner"
+                    ? "The account owner's role cannot be changed."
+                    : "You cannot change your own permissions."}
                 </p>
               )}
 
@@ -854,8 +913,8 @@ export default function EmployeeLogin() {
                 <div>
                   <strong>{selected.permission}</strong>
                   <p>
-                    Apply the corresponding access rules on your backend.
-                    Selecting a profile here only updates this page's state.
+                    Administrators and account owners can manage employees. All
+                    other profiles cannot add or change accounts.
                   </p>
                 </div>
               </div>
@@ -871,53 +930,16 @@ export default function EmployeeLogin() {
                 <button
                   type="submit"
                   className="employee-primary-btn"
-                  disabled={selected.permission === "Account owner"}
+                  disabled={
+                    saving ||
+                    selected.permission === "Account owner" ||
+                    selected.email === me.email
+                  }
                 >
-                  Save permissions
+                  {saving ? "Saving…" : "Save permissions"}
                 </button>
               </div>
             </form>
-          </section>
-        </div>
-      )}
-
-      {modal === "delete" && selected && (
-        <div
-          className="employee-modal-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setModal(null);
-          }}
-        >
-          <section
-            className="employee-modal employee-delete-modal"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="employee-delete-title"
-          >
-            <div className="employee-delete-icon">
-              <Icon name="trash" size={23} />
-            </div>
-            <h2 id="employee-delete-title">Remove employee?</h2>
-            <p>
-              Remove <strong>{selected.name}</strong> from this directory? This
-              demo only deletes the local entry.
-            </p>
-            <div className="employee-modal-actions">
-              <button
-                type="button"
-                className="employee-secondary-btn"
-                onClick={() => setModal(null)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="employee-danger-btn"
-                onClick={confirmDelete}
-              >
-                Remove employee
-              </button>
-            </div>
           </section>
         </div>
       )}

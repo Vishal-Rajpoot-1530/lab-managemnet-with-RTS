@@ -67,7 +67,9 @@ async function request(path, { method = "GET", body } = {}) {
     // An expired or invalid token on a protected call means we are logged out.
     if (response.status === 401 && token) clearToken();
 
-    throw new Error(data?.error || `Request failed (${response.status}).`);
+    const error = new Error(data?.error || `Request failed (${response.status}).`);
+    error.status = response.status; // lets callers react to 401 / 403
+    throw error;
   }
 
   return data;
@@ -107,6 +109,66 @@ export const authApi = {
   isLoggedIn() {
     return Boolean(readStoredToken());
   },
+};
+
+// Backends often wrap results ({ employees: [...] }, { data: [...] }).
+// These helpers make the pages work with either a bare value or a wrapped one.
+const unwrap = (data, ...keys) => {
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    for (const key of [...keys, "data", "result"]) {
+      if (data[key] !== undefined) return data[key];
+    }
+  }
+  return data;
+};
+
+const asList = (data, ...keys) => {
+  const value = unwrap(data, ...keys, "items", "rows");
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    const firstList = Object.values(value).find(Array.isArray);
+    if (firstList) return firstList;
+  }
+  return [];
+};
+
+/** Manage > Employees. Adding/changing is admin-only (enforced on the server). */
+export const employeesApi = {
+  list: async () => asList(await request("/manage/employees"), "employees"),
+  create: async (payload) => unwrap(await request("/manage/employees", { method: "POST", body: payload }), "employee"),
+  update: async (id, payload) =>
+    unwrap(await request(`/manage/employees/${id}`, { method: "PATCH", body: payload }), "employee"),
+};
+
+/** Manage > Lab account and Setup lab. Saving is admin-only (enforced on the server). */
+export const labApi = {
+  get: async () => unwrap(await request("/manage/lab-account"), "lab", "labAccount"),
+  save: async (payload) => unwrap(await request("/manage/lab-account", { method: "PUT", body: payload }), "lab", "labAccount"),
+  create: async (payload) => unwrap(await request("/manage/labs", { method: "POST", body: payload }), "lab"),
+};
+
+/** Manage > E-mail preferences (per logged-in user). */
+export const emailPrefsApi = {
+  get: async () => unwrap(await request("/manage/email-preferences"), "preferences"),
+  save: async (payload) =>
+    unwrap(await request("/manage/email-preferences", { method: "PUT", body: payload }), "preferences"),
+};
+
+/** Manage > Referral program. */
+export const referralApi = {
+  get: async () => unwrap(await request("/manage/referrals"), "referral", "program"),
+  invite: async (invitee) =>
+    unwrap(await request("/manage/referrals", { method: "POST", body: { invitee } }), "referral", "program"),
+};
+
+/** Manage > Doctor access (logins for referring doctors). */
+export const doctorAccessApi = {
+  list: async () => asList(await request("/manage/doctor-access"), "doctorAccess", "doctors"),
+  create: async (payload) =>
+    unwrap(await request("/manage/doctor-access", { method: "POST", body: payload }), "doctorAccess", "doctor"),
+  update: async (id, payload) =>
+    unwrap(await request(`/manage/doctor-access/${id}`, { method: "PATCH", body: payload }), "doctorAccess", "doctor"),
+  remove: (id) => request(`/manage/doctor-access/${id}`, { method: "DELETE" }),
 };
 
 export default authApi;

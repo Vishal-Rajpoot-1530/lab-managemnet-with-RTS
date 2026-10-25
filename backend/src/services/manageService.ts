@@ -2,11 +2,38 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { DoctorAccess, Employee } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
-import { badRequest, conflict, notFound } from "../utils/ApiError.js";
+import { ApiError, badRequest, conflict, notFound } from "../utils/ApiError.js";
 import { iso } from "../utils/format.js";
 import { splitName } from "./patientService.js";
 import { getSetting, setSetting } from "./settingsService.js";
 import { asBody, bool, id as toId, isEmail, optText, reqText, text } from "../utils/validate.js";
+
+// ---------------------------------------------------------------------
+// Who may do what
+// ---------------------------------------------------------------------
+/** Login roles (User.role) that may manage employees, doctors and lab details. */
+const ADMIN_ROLES = ["owner", "admin"];
+
+/** Access profiles an admin can give an employee (Employee.role). */
+const PROFILES = ["Administrator", "Configure", "Reports only", "View only"];
+
+/** Administrator profile = "admin" login; every other profile = "staff" login. */
+const loginRole = (role: string) => (role === "Administrator" ? "admin" : "staff");
+
+const forbidden = (message: string) => new ApiError(403, "FORBIDDEN", message);
+
+/** Throws unless the logged-in user is an owner or administrator. Returns that user. */
+export async function assertAdmin(actorUserId: number) {
+  const actor = await prisma.user.findUnique({ where: { id: actorUserId } });
+  if (!actor || !actor.active || !ADMIN_ROLES.includes(actor.role)) {
+    throw forbidden("Only an administrator can do this.");
+  }
+  return actor;
+}
+
+/** An id that may be missing (optional form fields). */
+const optId = (value: unknown) =>
+  value === undefined || value === null || value === "" ? null : toId(value);
 
 // ---------------------------------------------------------------------
 // Employees  - /api/manage/employees
@@ -61,19 +88,41 @@ async function assertEmailFree(email: string, exceptEmployeeId?: number) {
   if (clash) throw conflict("An employee with this email already exists.", "DUPLICATE_EMAIL");
 }
 
-/** Creates the employee. When a password is sent, they also get a login. */
-export async function createEmployee(input: unknown) {
+async function assertMobileFree(mobile: string | null, exceptEmployeeId?: number) {
+  if (!mobile) return;
+  const clash = await prisma.employee.findFirst({
+    where: { mobile, ...(exceptEmployeeId ? { id: { not: exceptEmployeeId } } : {}) },
+    select: { id: true },
+  });
+  if (clash) throw conflict("An employee with this mobile number already exists.", "DUPLICATE_MOBILE");
+}
+
+/** Only the owner can edit the owner. */
+function assertCanEdit(base: Employee, actor: { employeeId: number | null }) {
+  if (base.isOwner && actor.employeeId !== base.id) {
+    throw forbidden("Only the owner can edit the owner account.");
+  }
+}
+
+/** Admin only. Creates the employee together with their login (password required). */
+export async function createEmployee(input: unknown, actorUserId: number) {
+  await assertAdmin(actorUserId);
+
   const body = asBody(input);
   const name = reqText(body.name, "Name");
   const email = reqText(body.email, "Email", 190).toLowerCase();
   const role = reqText(body.role, "Role", 80);
   const password = typeof body.password === "string" ? body.password : "";
+  const mobile = optText(String(body.mobile ?? "").replace(/\D/g, ""), 20);
 
   if (!isEmail(email)) throw badRequest("Enter a valid email address.");
-  if (password && password.length < 8) throw badRequest("Password must be at least 8 characters.");
+  if (!PROFILES.includes(role)) throw badRequest("Choose a valid access profile.");
+  if (password.length < 8) throw badRequest("Password must be at least 8 characters.");
+  if (password.length > 72) throw badRequest("Password must be 72 characters or fewer.");
 
   await assertEmailFree(email);
-  if (password && (await prisma.user.findUnique({ where: { email } }))) {
+  await assertMobileFree(mobile);
+  if (await prisma.user.findUnique({ where: { email } })) {
     throw conflict("A login with this email already exists.", "DUPLICATE_EMAIL");
   }
 
@@ -86,7 +135,7 @@ export async function createEmployee(input: unknown) {
         firstName: split.firstName || null,
         lastName: split.lastName || null,
         email,
-        mobile: optText(String(body.mobile ?? "").replace(/\D/g, ""), 20),
+        mobile,
         role,
         active: true,
         isOwner: false,
@@ -94,36 +143,52 @@ export async function createEmployee(input: unknown) {
       },
     });
 
-    if (password) {
-      await tx.user.create({
-        data: {
-          employeeId: employee.id,
-          name,
-          email,
-          passwordHash: await bcrypt.hash(password, 10),
-          role: "staff",
-        },
-      });
-    }
+    await tx.user.create({
+      data: {
+        employeeId: employee.id,
+        name,
+        email,
+        passwordHash: await bcrypt.hash(password, 10),
+        role: loginRole(role),
+      },
+    });
 
     return employee;
   });
 
-  return serializeEmployee(row, Boolean(password));
+  return serializeEmployee(row, true);
 }
 
-export async function updateEmployee(employeeId: number, input: unknown) {
+/** Admin only. */
+export async function updateEmployee(employeeId: number, input: unknown, actorUserId: number) {
+  const actor = await assertAdmin(actorUserId);
+
   const base = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!base) throw notFound("Employee");
+  assertCanEdit(base, actor);
 
   const body = asBody(input);
   const name = body.name !== undefined ? reqText(body.name, "Name") : employeeName(base);
   const email = body.email !== undefined ? reqText(body.email, "Email", 190).toLowerCase() : base.email;
   const active = body.active !== undefined ? bool(body.active, base.active) : base.active;
+  const mobile =
+    body.mobile !== undefined ? optText(String(body.mobile).replace(/\D/g, ""), 20) : base.mobile;
+  const isSelf = actor.employeeId === employeeId;
 
   if (!isEmail(email)) throw badRequest("Enter a valid email address.");
   if (base.isOwner && !active) throw badRequest("The owner account cannot be deactivated.");
+  if (isSelf && !active) throw badRequest("You cannot block your own account.");
   if (email !== base.email) await assertEmailFree(email, employeeId);
+  if (mobile !== base.mobile) await assertMobileFree(mobile, employeeId);
+
+  // The owner keeps their role; nobody changes their own role.
+  let role = base.role;
+  if (body.role !== undefined && !base.isOwner) {
+    const next = reqText(body.role, "Role", 80);
+    if (!PROFILES.includes(next)) throw badRequest("Choose a valid access profile.");
+    if (isSelf && next !== base.role) throw badRequest("You cannot change your own role.");
+    role = next;
+  }
 
   const split = splitName(name);
 
@@ -135,15 +200,24 @@ export async function updateEmployee(employeeId: number, input: unknown) {
         firstName: split.firstName || null,
         lastName: split.lastName || null,
         email,
-        mobile: body.mobile !== undefined ? optText(String(body.mobile).replace(/\D/g, ""), 20) : base.mobile,
-        role: body.role !== undefined ? optText(body.role, 80) : base.role,
+        mobile,
+        role,
         active,
       },
     });
 
-    // The login follows the employee's name, e-mail and active switch.
-    const login = await tx.user.updateMany({ where: { employeeId }, data: { name, email, active } });
-    if (login.count && !active) {
+    // The login follows the employee's name, e-mail, active switch and access profile.
+    const login = await tx.user.updateMany({
+      where: { employeeId },
+      data: {
+        name,
+        email,
+        active,
+        ...(base.isOwner ? {} : { role: loginRole(role ?? "") }),
+      },
+    });
+
+    if (login.count && (!active || role !== base.role)) {
       const users = await tx.user.findMany({ where: { employeeId }, select: { id: true } });
       await tx.authSession.updateMany({
         where: { userId: { in: users.map((u) => u.id) }, revokedAt: null },
@@ -157,9 +231,13 @@ export async function updateEmployee(employeeId: number, input: unknown) {
   return (await withLogin([row]))[0]!;
 }
 
-export async function setEmployeePermissions(employeeId: number, value: unknown) {
+/** Admin only. */
+export async function setEmployeePermissions(employeeId: number, value: unknown, actorUserId: number) {
+  const actor = await assertAdmin(actorUserId);
+
   const base = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!base) throw notFound("Employee");
+  assertCanEdit(base, actor);
   if (!Array.isArray(value)) throw badRequest("Permissions must be an array.");
 
   const row = await prisma.employee.update({
@@ -195,7 +273,10 @@ export async function getLabAccount() {
   };
 }
 
-export async function saveLabAccount(input: unknown) {
+/** Admin only. */
+export async function saveLabAccount(input: unknown, actorUserId: number) {
+  await assertAdmin(actorUserId);
+
   const body = asBody(input);
   const name = reqText(body.labName, "Laboratory name");
 
@@ -219,8 +300,10 @@ export async function saveLabAccount(input: unknown) {
   return getLabAccount();
 }
 
-/** Setup lab: adds another lab / centre to this account. */
-export async function createLab(input: unknown) {
+/** Setup lab: adds another lab / centre to this account. Admin only. */
+export async function createLab(input: unknown, actorUserId: number) {
+  await assertAdmin(actorUserId);
+
   const body = asBody(input);
   const name = reqText(body.labName, "Laboratory name", 160);
 
@@ -330,6 +413,8 @@ export async function inviteReferral(input: unknown) {
 
 // ---------------------------------------------------------------------
 // Doctor access  - /api/manage/doctor-access
+// A doctor has a doctor_access row (permissions) and a users row with role
+// "doctor", so they sign in on the normal login form. Both are kept in step.
 // ---------------------------------------------------------------------
 const serializeDoctorAccess = (d: DoctorAccess) => ({
   id: d.id,
@@ -344,57 +429,116 @@ const serializeDoctorAccess = (d: DoctorAccess) => ({
   createdAt: iso(d.createdAt),
 });
 
-export async function listDoctorAccess() {
+/** Admin only. */
+export async function listDoctorAccess(actorUserId: number) {
+  await assertAdmin(actorUserId);
   return (await prisma.doctorAccess.findMany({ orderBy: { id: "asc" } })).map(serializeDoctorAccess);
 }
 
-export async function createDoctorAccess(input: unknown) {
+/** Admin only. */
+export async function createDoctorAccess(input: unknown, actorUserId: number) {
+  await assertAdmin(actorUserId);
+
   const body = asBody(input);
   const email = reqText(body.email, "Email", 190).toLowerCase();
   const password = typeof body.password === "string" ? body.password : "";
 
   if (!isEmail(email)) throw badRequest("Enter a valid email address.");
   if (password.length < 8) throw badRequest("Password must be at least 8 characters.");
+  if (password.length > 72) throw badRequest("Password must be 72 characters or fewer.");
   if (await prisma.doctorAccess.findUnique({ where: { email } })) throw conflict("This email already has doctor access.");
+  if (await prisma.user.findUnique({ where: { email } })) {
+    throw conflict("A login with this email already exists.", "DUPLICATE_EMAIL");
+  }
 
-  const row = await prisma.doctorAccess.create({
-    data: {
-      referrerId: toId(body.referrerId),
-      name: reqText(body.name, "Name"),
-      email,
-      mobile: optText(body.mobile, 20),
-      passwordHash: await bcrypt.hash(password, 10),
-      canViewReports: bool(body.canViewReports, true),
-      canDownloadReports: bool(body.canDownloadReports, true),
-    },
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const row = await prisma.$transaction(async (tx) => {
+    const created = await tx.doctorAccess.create({
+      data: {
+        referrerId: optId(body.referrerId),
+        name: reqText(body.name, "Name"),
+        email,
+        mobile: optText(body.mobile, 20),
+        passwordHash,
+        canViewReports: bool(body.canViewReports, true),
+        canDownloadReports: bool(body.canDownloadReports, true),
+      },
+    });
+
+    await tx.user.create({
+      data: { name: created.name, email, passwordHash, role: "doctor" },
+    });
+
+    return created;
   });
+
   return serializeDoctorAccess(row);
 }
 
-export async function updateDoctorAccess(accessId: number, input: unknown) {
+/** Admin only. */
+export async function updateDoctorAccess(accessId: number, input: unknown, actorUserId: number) {
+  await assertAdmin(actorUserId);
+
   const base = await prisma.doctorAccess.findUnique({ where: { id: accessId } });
   if (!base) throw notFound("Doctor access");
 
   const body = asBody(input);
   const password = typeof body.password === "string" && body.password ? body.password : "";
   if (password && password.length < 8) throw badRequest("Password must be at least 8 characters.");
+  if (password.length > 72) throw badRequest("Password must be 72 characters or fewer.");
 
-  const row = await prisma.doctorAccess.update({
-    where: { id: accessId },
-    data: {
-      ...(body.name !== undefined ? { name: reqText(body.name, "Name") } : {}),
-      ...(body.mobile !== undefined ? { mobile: optText(body.mobile, 20) } : {}),
-      ...(body.referrerId !== undefined ? { referrerId: toId(body.referrerId) } : {}),
-      canViewReports: bool(body.canViewReports, base.canViewReports),
-      canDownloadReports: bool(body.canDownloadReports, base.canDownloadReports),
-      active: bool(body.active, base.active),
-      ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
-    },
+  const passwordHash = password ? await bcrypt.hash(password, 10) : null;
+
+  const row = await prisma.$transaction(async (tx) => {
+    const updated = await tx.doctorAccess.update({
+      where: { id: accessId },
+      data: {
+        ...(body.name !== undefined ? { name: reqText(body.name, "Name") } : {}),
+        ...(body.mobile !== undefined ? { mobile: optText(body.mobile, 20) } : {}),
+        ...(body.referrerId !== undefined ? { referrerId: optId(body.referrerId) } : {}),
+        canViewReports: bool(body.canViewReports, base.canViewReports),
+        canDownloadReports: bool(body.canDownloadReports, base.canDownloadReports),
+        active: bool(body.active, base.active),
+        ...(passwordHash ? { passwordHash } : {}),
+      },
+    });
+
+    // Keep the login in step. updateMany so a doctor added before logins existed doesn't fail.
+    await tx.user.updateMany({
+      where: { email: base.email, role: "doctor" },
+      data: { name: updated.name, active: updated.active, ...(passwordHash ? { passwordHash } : {}) },
+    });
+
+    // Blocked, or password reset: sign the doctor out everywhere.
+    if (!updated.active || passwordHash) {
+      const login = await tx.user.findFirst({
+        where: { email: base.email, role: "doctor" },
+        select: { id: true },
+      });
+      if (login) {
+        await tx.authSession.updateMany({
+          where: { userId: login.id, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
+    }
+
+    return updated;
   });
+
   return serializeDoctorAccess(row);
 }
 
-export async function removeDoctorAccess(accessId: number) {
-  const result = await prisma.doctorAccess.deleteMany({ where: { id: accessId } });
-  if (!result.count) throw notFound("Doctor access");
+/** Admin only. Removes the doctor's access and login (sessions go with the user row). */
+export async function removeDoctorAccess(accessId: number, actorUserId: number) {
+  await assertAdmin(actorUserId);
+
+  const doctor = await prisma.doctorAccess.findUnique({ where: { id: accessId } });
+  if (!doctor) throw notFound("Doctor access");
+
+  await prisma.$transaction([
+    prisma.doctorAccess.delete({ where: { id: accessId } }),
+    prisma.user.deleteMany({ where: { email: doctor.email, role: "doctor" } }),
+  ]);
 }
