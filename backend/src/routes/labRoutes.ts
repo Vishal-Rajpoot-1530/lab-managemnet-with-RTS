@@ -1,8 +1,10 @@
 import { Router } from "express";
+import { prisma } from "../lib/prisma.js";
 import * as catalog from "../services/catalogService.js";
 import * as extras from "../services/labExtrasService.js";
 import * as tests from "../services/testService.js";
 import * as reports from "../services/reportService.js";
+import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { id, idParam, query } from "../utils/validate.js";
 import type { Request, Response } from "express";
@@ -12,6 +14,13 @@ const r = Router();
 /** The catalogue pages expect { success, data, requestId }. */
 const ok = (req: Request, res: Response, data: unknown, status = 200, extra: object = {}) =>
   res.status(status).json({ success: true, data, ...extra, requestId: req.requestId });
+
+/** Lab pages are for staff. Doctor logins (role "doctor") are turned away. */
+r.use(asyncHandler(async (req, _res, next) => {
+  const user = await prisma.user.findUnique({ where: { id: req.auth!.id }, select: { role: true } });
+  if (user?.role === "doctor") throw new ApiError(403, "FORBIDDEN", "Doctor accounts cannot use this area.");
+  next();
+}));
 
 // ---- test categories
 r.get("/test-categories", asyncHandler(async (req, res) => {
@@ -59,7 +68,10 @@ r.delete("/panels/:id", asyncHandler(async (req, res) => { await extras.removePa
 
 r.get("/interpretations", asyncHandler(async (req, res) => ok(req, res, await extras.listInterpretations())));
 r.post("/interpretations", asyncHandler(async (req, res) => ok(req, res, await extras.saveInterpretation(null, req.body), 201)));
-r.patch("/interpretations/:id", asyncHandler(async (req, res) => ok(req, res, await extras.saveInterpretation(idParam(req.params.id), req.body))));
+const updateInterpretation = asyncHandler(async (req, res) =>
+  ok(req, res, await extras.saveInterpretation(idParam(req.params.id), req.body), 200, { message: "Interpretation updated successfully." }));
+r.patch("/interpretations/:id", updateInterpretation);
+r.put("/interpretations/:id", updateInterpretation);
 r.delete("/interpretations/:id", asyncHandler(async (req, res) => { await extras.removeInterpretation(idParam(req.params.id)); res.status(204).end(); }));
 
 // ---- today's lab reports (labApiService.today)

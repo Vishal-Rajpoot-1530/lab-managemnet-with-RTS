@@ -1,3 +1,5 @@
+
+
 import { getApiToken, setApiTokenGetter } from "./apiToken";
 
 // Other files (like apiClient.js) already import the token helpers from this
@@ -169,6 +171,21 @@ export const doctorAccessApi = {
   update: async (id, payload) =>
     unwrap(await request(`/manage/doctor-access/${id}`, { method: "PATCH", body: payload }), "doctorAccess", "doctor"),
   remove: (id) => request(`/manage/doctor-access/${id}`, { method: "DELETE" }),
+};
+
+/** Lab > Interpretations. Change LAB_BASE if your lab routes are mounted elsewhere. */
+const LAB_BASE = "/lab";
+
+export const interpretationApi = {
+  list: async () => asList(await request(`${LAB_BASE}/interpretations`), "interpretations"),
+  create: async (payload) =>
+    unwrap(await request(`${LAB_BASE}/interpretations`, { method: "POST", body: payload }), "interpretation"),
+  update: async (id, payload) =>
+    unwrap(await request(`${LAB_BASE}/interpretations/${id}`, { method: "PATCH", body: payload }), "interpretation"),
+  remove: (id) => request(`${LAB_BASE}/interpretations/${id}`, { method: "DELETE" }),
+  // Used by the "linked to" dropdown. Adjust the paths to your existing test and panel list routes.
+  tests: async () => asList(await request(`${LAB_BASE}/tests`), "tests"),
+  panels: async () => asList(await request(`${LAB_BASE}/panels`), "panels"),
 };
 
 export default authApi;

@@ -415,6 +415,12 @@ model Interpretation {
   updatedAt DateTime @updatedAt @map("updated_at")
   test      Test?    @relation(fields: [testId], references: [id], onDelete: SetNull)
 
+
+  panelId   Int?     @map("panel_id")
+  panel     TestPanel? @relation(fields: [panelId], references: [id], onDelete: SetNull)
+
+  @@index([panelId])   // add next to your existing @@index([testId])
+
   @@index([testId])
   @@map("interpretations")
 }
@@ -454,6 +460,8 @@ model TestPanel {
   createdAt   DateTime        @default(now()) @map("created_at")
   updatedAt   DateTime        @updatedAt @map("updated_at")
   items       TestPanelItem[]
+
+  interpretations Interpretation[]
 
   @@map("test_panels")
 }
