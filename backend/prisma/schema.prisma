@@ -1,3 +1,13 @@
+// =====================================================================
+//  LabLIMS - Prisma schema (MySQL)
+//
+//  This file is the single source of truth for the database.
+//  Do not edit tables by hand; change this file and run:
+//      npm run db:migrate
+//
+//  New machine / after pulling:  see prisma/README.md
+// =====================================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,75 +17,823 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model TestCategory {
-  id        BigInt    @id @default(autoincrement())
-  name      String    @unique(map: "uq_test_categories_name") @db.VarChar(160)
-  sortOrder Int       @default(0) @map("sort_order")
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
-  tests     LabTest[]
+// ---------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------
 
-  @@index([sortOrder], map: "idx_test_categories_order")
-  @@index([active], map: "idx_test_categories_active")
+enum OtpChannel {
+  email
+  sms
+}
+
+enum OtpPurpose {
+  login
+  signup
+  password_reset
+  verify
+}
+
+enum RangeSex {
+  ANY
+  MALE
+  FEMALE
+  OTHER
+}
+
+// =====================================================================
+// 1. LAB SETUP AND SETTINGS
+// =====================================================================
+
+/// One row only (id = 1): the lab's own details, shown on bills and reports.
+model LabProfile {
+  id             Int      @id @default(1)
+  name           String   @db.VarChar(255)
+  tagline        String?  @db.VarChar(255)
+  address        String?  @db.Text
+  city           String?  @db.VarChar(120)
+  state          String?  @db.VarChar(120)
+  pincode        String?  @db.VarChar(12)
+  phone          String?  @db.VarChar(30)
+  altPhone       String?  @map("alt_phone") @db.VarChar(30)
+  email          String?  @db.VarChar(190)
+  website        String?  @db.VarChar(255)
+  logoPath       String?  @map("logo_path") @db.VarChar(500)
+  registrationNo String?  @map("registration_no") @db.VarChar(80)
+  gstin          String?  @db.VarChar(20)
+  billFooter     String?  @map("bill_footer") @db.Text
+  reportFooter   String?  @map("report_footer") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("lab_profile")
+}
+
+model CollectionCentre {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(160)
+  address   String?  @db.Text
+  phone     String?  @db.VarChar(30)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("collection_centres")
+}
+
+/// Settings pages (lab / report / billing / notification / email preferences).
+/// scope = which page, settingKey = the option, userId 0 = applies to everyone.
+model AppSetting {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @default(0) @map("user_id")
+  scope        String   @db.VarChar(40)
+  settingKey   String   @map("setting_key") @db.VarChar(120)
+  settingValue Json?    @map("setting_value")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, scope, settingKey])
+  @@index([scope])
+  @@map("app_settings")
+}
+
+// =====================================================================
+// 2. LOGIN, SECURITY AND ACCESS
+// =====================================================================
+
+/// People and roles in the lab.
+model Employee {
+  id          Int      @id @default(autoincrement())
+  name        String?  @db.VarChar(255)
+  firstName   String?  @map("first_name") @db.VarChar(120)
+  lastName    String?  @map("last_name") @db.VarChar(120)
+  email       String   @db.VarChar(190)
+  mobile      String?  @db.VarChar(20)
+  role        String?  @db.VarChar(80)
+  active      Boolean  @default(true)
+  isOwner     Boolean  @default(false) @map("is_owner")
+  permissions Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("employees")
+}
+
+/// Login credentials. passwordHash is always a bcrypt hash, never the password.
+model User {
+  id               Int           @id @default(autoincrement())
+  employeeId       Int?          @map("employee_id")
+  name             String        @db.VarChar(255)
+  email            String        @unique @db.VarChar(190)
+  mobile           String?       @unique @db.VarChar(20)
+  passwordHash     String        @map("password_hash") @db.VarChar(255)
+  role             String        @default("owner") @db.VarChar(30)
+  emailVerifiedAt  DateTime?     @map("email_verified_at")
+  mobileVerifiedAt DateTime?     @map("mobile_verified_at")
+  active           Boolean       @default(true)
+  failedLoginCount Int           @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?     @map("locked_until")
+  lastLoginAt      DateTime?     @map("last_login_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  sessions         AuthSession[]
+
+  @@index([employeeId])
+  @@map("users")
+}
+
+/// Email / SMS one-time passwords (login, signup, password reset).
+model UserOtp {
+  id          Int        @id @default(autoincrement())
+  userId      Int?       @map("user_id")
+  channel     OtpChannel
+  destination String     @db.VarChar(190)
+  purpose     OtpPurpose
+  codeHash    String     @map("code_hash") @db.VarChar(255)
+  attempts    Int        @default(0)
+  expiresAt   DateTime   @map("expires_at")
+  consumedAt  DateTime?  @map("consumed_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  @@index([destination, purpose])
+  @@index([expiresAt])
+  @@map("user_otps")
+}
+
+/// Where the user is logged in (Manage > Browser security).
+model AuthSession {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  tokenId    String    @unique @map("token_id") @db.Char(36)
+  userAgent  String?   @map("user_agent") @db.VarChar(500)
+  ipAddress  String?   @map("ip_address") @db.VarChar(64)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastSeenAt DateTime? @map("last_seen_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+model IpAllowlist {
+  id        Int      @id @default(autoincrement())
+  ipAddress String   @unique @map("ip_address") @db.VarChar(64)
+  label     String?  @db.VarChar(160)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("ip_allowlist")
+}
+
+// =====================================================================
+// 3. PEOPLE: REFERRERS, AGENTS, DOCTOR ACCESS, PATIENTS, OUTSOURCE LABS
+// =====================================================================
+
+model Referrer {
+  id        Int      @id @default(autoincrement())
+  title     String?  @db.VarChar(20)
+  firstName String?  @map("first_name") @db.VarChar(120)
+  lastName  String?  @map("last_name") @db.VarChar(120)
+  name      String?  @db.VarChar(255)
+  degree    String?  @db.VarChar(120)
+  mobile    String?  @db.VarChar(20)
+  email     String?  @db.VarChar(190)
+  address   String?  @db.Text
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("referrers")
+}
+
+/// Sample collection agents.
+model Agent {
+  id        Int      @id @default(autoincrement())
+  name      String?  @db.VarChar(255)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("agents")
+}
+
+/// Referring doctors who can log in to view their patients' reports.
+model DoctorAccess {
+  id                 Int       @id @default(autoincrement())
+  referrerId         Int?      @map("referrer_id")
+  name               String    @db.VarChar(255)
+  email              String    @unique @db.VarChar(190)
+  mobile             String?   @db.VarChar(20)
+  passwordHash       String    @map("password_hash") @db.VarChar(255)
+  canViewReports     Boolean   @default(true) @map("can_view_reports")
+  canDownloadReports Boolean   @default(true) @map("can_download_reports")
+  active             Boolean   @default(true)
+  lastLoginAt        DateTime? @map("last_login_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@index([referrerId])
+  @@map("doctor_access")
+}
+
+model Patient {
+  id           Int       @id @default(autoincrement())
+  uhid         String?   @unique @db.VarChar(60)
+  title        String?   @db.VarChar(20)
+  firstName    String    @map("first_name") @db.VarChar(120)
+  lastName     String?   @map("last_name") @db.VarChar(120)
+  sex          String?   @db.VarChar(20)
+  years        Int?
+  months       Int?
+  days         Int?
+  dateOfBirth  DateTime? @map("date_of_birth") @db.Date
+  mobile       String    @db.VarChar(20)
+  email        String?   @db.VarChar(190)
+  address      String?   @db.Text
+  aadhaar      String?   @db.VarChar(12)
+  history      String?   @db.Text
+  onlineReport Boolean   @default(false) @map("online_report")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([mobile])
+  @@index([firstName, lastName])
+  @@map("patients")
+}
+
+model OutsourceLab {
+  id        Int             @id @default(autoincrement())
+  name      String          @unique @db.VarChar(255)
+  contact   String?         @db.VarChar(160)
+  mobile    String?         @db.VarChar(20)
+  email     String?         @db.VarChar(190)
+  address   String?         @db.Text
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  tests     Test[]
+  cases     OutsourceCase[]
+
+  @@map("outsource_labs")
+}
+
+// =====================================================================
+// 4. TEST CATALOG (Lab > Categories, Test database, Packages, Panels...)
+// =====================================================================
+
+model TestCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(160)
+  sortOrder Int      @default(0) @map("sort_order")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  tests     Test[]
+
+  @@index([sortOrder])
+  @@index([active])
   @@map("test_categories")
 }
 
-model LabUnit {
-  id        BigInt    @id @default(autoincrement())
-  name      String    @unique(map: "uq_lab_units_name") @db.VarChar(120)
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
-  tests     LabTest[]
-  parameters LabTestParameter[]
+model Unit {
+  id         Int             @id @default(autoincrement())
+  name       String          @unique @db.VarChar(60)
+  active     Boolean         @default(true)
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  parameters TestParameter[]
 
-  @@index([active], map: "idx_lab_units_active")
-  @@map("lab_units")
+  @@map("units")
 }
 
-model LabTest {
-  id              BigInt             @id @default(autoincrement())
-  type            String             @db.VarChar(30)
-  name            String             @db.VarChar(180)
-  shortName       String?            @map("short_name") @db.VarChar(100)
-  categoryId      BigInt             @map("category_id")
-  price           Decimal            @default(0) @db.Decimal(12, 2)
-  unitId          BigInt?            @map("unit_id")
-  inputType       String?            @map("input_type") @db.VarChar(30)
-  defaultResult   String?            @map("default_result") @db.Text
-  optional        Boolean            @default(false)
-  displayName     Boolean            @default(true) @map("display_name")
-  method          String?            @db.VarChar(180)
-  instrument      String?            @db.VarChar(180)
-  interpretation  String?            @db.Text
-  active          Boolean            @default(true)
-  category        TestCategory       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  unit            LabUnit?           @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  parameters      LabTestParameter[]
+/// How a result is entered: numeric, text, dropdown, ...
+model InputType {
+  id         Int             @id @default(autoincrement())
+  code       String          @unique @db.VarChar(40)
+  name       String          @db.VarChar(120)
+  active     Boolean         @default(true)
+  createdAt  DateTime        @default(now()) @map("created_at")
+  parameters TestParameter[]
 
-  @@index([categoryId], map: "idx_lab_tests_category")
-  @@index([unitId], map: "idx_lab_tests_unit")
-  @@index([active], map: "idx_lab_tests_active")
-  @@map("lab_tests")
+  @@map("input_types")
 }
 
-model LabTestParameter {
-  id                BigInt   @id @default(autoincrement())
-  testId            BigInt   @map("test_id")
-  order             Int      @default(0) @map("display_order")
-  name              String   @db.VarChar(180)
-  unitId            BigInt?  @map("unit_id")
-  inputType         String   @default("single_line") @map("input_type") @db.VarChar(30)
-  groupBy           String?  @map("group_by_name") @db.VarChar(180)
-  defaultResult     String?  @map("default_result") @db.Text
-  optional          Boolean  @default(false)
-  parentParameterId BigInt?  @map("parent_parameter_id")
-  test              LabTest  @relation(fields: [testId], references: [id], onDelete: Cascade)
-  unit              LabUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+model Test {
+  id                  Int               @id @default(autoincrement())
+  categoryId          Int?              @map("category_id")
+  code                String?           @db.VarChar(40)
+  name                String            @db.VarChar(255)
+  shortName           String?           @map("short_name") @db.VarChar(80)
+  /// lab, usg, xray, ctScan, mri, ... (same keys as the bill form)
+  department          String            @default("lab") @db.VarChar(30)
+  testType            String            @default("single") @map("test_type") @db.VarChar(30)
+  price               Decimal           @default(0) @db.Decimal(12, 2)
+  sampleType          String?           @map("sample_type") @db.VarChar(80)
+  container           String?           @db.VarChar(80)
+  method              String?           @db.VarChar(160)
+  instrument          String?           @db.VarChar(160)
+  displayName         Boolean           @default(true) @map("display_name")
+  turnaroundHours     Int?              @map("turnaround_hours")
+  isOutsource         Boolean           @default(false) @map("is_outsource")
+  outsourceLabId      Int?              @map("outsource_lab_id")
+  description         String?           @db.Text
+  patientInstructions String?           @map("patient_instructions") @db.Text
+  sortOrder           Int               @default(0) @map("sort_order")
+  active              Boolean           @default(true)
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  category            TestCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  outsourceLab        OutsourceLab?     @relation(fields: [outsourceLabId], references: [id], onDelete: SetNull)
+  parameters          TestParameter[]
+  interpretations     Interpretation[]
+  packageItems        TestPackageItem[]
+  panelItems          TestPanelItem[]
 
-  @@index([testId, order], map: "idx_lab_test_parameters_order")
-  @@index([unitId], map: "idx_lab_test_parameters_unit")
-  @@index([parentParameterId], map: "idx_lab_test_parameters_parent")
-  @@map("lab_test_parameters")
+  @@index([name])
+  @@index([categoryId])
+  @@index([department])
+  @@index([active])
+  @@map("tests")
+}
+
+/// The result fields of a test (e.g. Hemoglobin, TLC inside a CBC).
+model TestParameter {
+  id              Int                  @id @default(autoincrement())
+  testId          Int                  @map("test_id")
+  parentId        Int?                 @map("parent_id")
+  name            String               @db.VarChar(255)
+  inputTypeId     Int?                 @map("input_type_id")
+  unitId          Int?                 @map("unit_id")
+  decimals        Int?                 @db.TinyInt
+  /// choices for dropdown inputs
+  optionValues    Json?                @map("option_values")
+  defaultValue    String?              @map("default_value") @db.VarChar(255)
+  /// for calculated results
+  formula         String?              @db.VarChar(500)
+  isHeading       Boolean              @default(false) @map("is_heading")
+  isRequired      Boolean              @default(false) @map("is_required")
+  showInReport    Boolean              @default(true) @map("show_in_report")
+  /// optional section heading the parameter is shown under
+  groupBy         String?              @map("group_by") @db.VarChar(160)
+  sortOrder       Int                  @default(0) @map("sort_order")
+  test            Test                 @relation(fields: [testId], references: [id], onDelete: Cascade)
+  inputType       InputType?           @relation(fields: [inputTypeId], references: [id], onDelete: SetNull)
+  unit            Unit?                @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  referenceRanges TestReferenceRange[]
+
+  @@index([testId, sortOrder])
+  @@map("test_parameters")
+}
+
+/// Normal ranges, by sex and age.
+model TestReferenceRange {
+  id           Int           @id @default(autoincrement())
+  parameterId  Int           @map("parameter_id")
+  sex          RangeSex      @default(ANY)
+  ageFromDays  Int           @default(0) @map("age_from_days")
+  ageToDays    Int?          @map("age_to_days")
+  lowValue     Decimal?      @map("low_value") @db.Decimal(14, 4)
+  highValue    Decimal?      @map("high_value") @db.Decimal(14, 4)
+  criticalLow  Decimal?      @map("critical_low") @db.Decimal(14, 4)
+  criticalHigh Decimal?      @map("critical_high") @db.Decimal(14, 4)
+  rangeText    String?       @map("range_text") @db.VarChar(255)
+  notes        String?       @db.VarChar(255)
+  parameter    TestParameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+
+  @@index([parameterId])
+  @@map("test_reference_ranges")
+}
+
+model Interpretation {
+  id        Int      @id @default(autoincrement())
+  testId    Int?     @map("test_id")
+  name      String   @db.VarChar(255)
+  content   String   @db.MediumText
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  test      Test?    @relation(fields: [testId], references: [id], onDelete: SetNull)
+
+  @@index([testId])
+  @@map("interpretations")
+}
+
+model TestPackage {
+  id          Int               @id @default(autoincrement())
+  code        String?           @db.VarChar(40)
+  name        String            @unique @db.VarChar(255)
+  price       Decimal           @default(0) @db.Decimal(12, 2)
+  description String?           @db.Text
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  items       TestPackageItem[]
+
+  @@map("test_packages")
+}
+
+model TestPackageItem {
+  packageId Int         @map("package_id")
+  testId    Int         @map("test_id")
+  sortOrder Int         @default(0) @map("sort_order")
+  package   TestPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  test      Test        @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@id([packageId, testId])
+  @@map("test_package_items")
+}
+
+model TestPanel {
+  id          Int             @id @default(autoincrement())
+  code        String?         @db.VarChar(40)
+  name        String          @unique @db.VarChar(255)
+  price       Decimal         @default(0) @db.Decimal(12, 2)
+  description String?         @db.Text
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  items       TestPanelItem[]
+
+  @@map("test_panels")
+}
+
+model TestPanelItem {
+  panelId   Int       @map("panel_id")
+  testId    Int       @map("test_id")
+  sortOrder Int       @default(0) @map("sort_order")
+  panel     TestPanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  test      Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@id([panelId, testId])
+  @@map("test_panel_items")
+}
+
+// =====================================================================
+// 5. BILLING (Cases > New bill, Bills, Transactions)
+// =====================================================================
+
+model Bill {
+  id           Int     @id @default(autoincrement())
+  regNo        String  @unique @map("reg_no") @db.VarChar(20)
+  caseNo       String  @map("case_no") @db.VarChar(20)
+  status       String  @default("Active") @db.VarChar(20)
+  cancelReason String? @map("cancel_reason") @db.VarChar(255)
+
+  patientId      Int?    @map("patient_id")
+  patientName    String  @map("patient_name") @db.VarChar(255)
+  patientDetails Json?   @map("patient_details")
+  mobile         String  @default("") @db.VarChar(20)
+  uhid           String? @db.VarChar(60)
+  age            String? @db.VarChar(60)
+  sex            String? @db.VarChar(20)
+  onlineReport   Boolean @default(false) @map("online_report")
+
+  referrerId       Int?    @map("referrer_id")
+  referrer         String  @default("Self") @db.VarChar(255)
+  agentId          Int?    @map("agent_id")
+  agentName        String? @map("agent_name") @db.VarChar(255)
+  collectionCentre String? @map("collection_centre") @db.VarChar(120)
+
+  total            Decimal @default(0) @db.Decimal(12, 2)
+  discount         Decimal @default(0) @db.Decimal(12, 2)
+  received         Decimal @default(0) @db.Decimal(12, 2)
+  balance          Decimal @default(0) @db.Decimal(12, 2)
+  collectionCharge Decimal @default(0) @map("collection_charge") @db.Decimal(12, 2)
+  mode             String  @default("cash") @db.VarChar(30)
+  remarks          String? @db.Text
+  payment          Json?
+
+  createdBy String?  @map("created_by") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  investigations   BillInvestigation[]
+  modalityPayments BillModalityPayment[]
+  transactions     BillTransaction[]
+  report           Report?
+  radiologyReports RadiologyReport[]
+  outsourceCases   OutsourceCase[]
+
+  @@index([patientId])
+  @@index([mobile])
+  @@index([status])
+  @@index([referrerId])
+  @@index([createdAt])
+  @@map("bills")
+}
+
+/// Tests on a bill (lab, usg, xray, ...).
+model BillInvestigation {
+  id                Int       @id @default(autoincrement())
+  billId            Int       @map("bill_id")
+  sortOrder         Int       @default(0) @map("sort_order")
+  testId            Int?      @map("test_id")
+  modality          String    @default("lab") @db.VarChar(30)
+  section           String?   @db.VarChar(80)
+  name              String    @db.VarChar(255)
+  price             Decimal   @default(0) @db.Decimal(12, 2)
+  unit              String?   @db.VarChar(60)
+  reference         String?   @db.VarChar(255)
+  status            String    @default("Pending") @db.VarChar(30)
+  sampleCollectedAt DateTime? @map("sample_collected_at")
+  bill              Bill      @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@index([testId])
+  @@index([modality])
+  @@map("bill_investigations")
+}
+
+/// The Paid / Discount boxes of each modality section on the bill form.
+model BillModalityPayment {
+  billId   Int     @map("bill_id")
+  modality String  @db.VarChar(30)
+  paid     Decimal @default(0) @db.Decimal(12, 2)
+  discount Decimal @default(0) @db.Decimal(12, 2)
+  bill     Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@id([billId, modality])
+  @@map("bill_modality_payments")
+}
+
+/// Payments received against a bill.
+model BillTransaction {
+  id         Int      @id @default(autoincrement())
+  billId     Int      @map("bill_id")
+  txNo       Int      @default(1) @map("tx_no")
+  amount     Decimal  @default(0) @db.Decimal(12, 2)
+  mode       String   @default("cash") @db.VarChar(30)
+  receivedBy String?  @map("received_by") @db.VarChar(255)
+  paidAt     DateTime @default(now()) @map("paid_at")
+  bill       Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@index([paidAt])
+  @@map("bill_transactions")
+}
+
+// =====================================================================
+// 6. LAB REPORTS (Lab > Today's reports, Search reports)
+// =====================================================================
+
+/// One report per bill.
+model Report {
+  id             Int          @id @default(autoincrement())
+  billId         Int          @unique @map("bill_id")
+  regNo          String       @map("reg_no") @db.VarChar(20)
+  patient        String       @db.VarChar(255)
+  age            String?      @db.VarChar(60)
+  referrer       String?      @db.VarChar(255)
+  status         String       @default("New") @db.VarChar(30)
+  interpretation String?      @db.Text
+  notes          String?      @db.Text
+  verifiedBy     String?      @map("verified_by") @db.VarChar(255)
+  reportedAt     DateTime?    @map("reported_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  bill           Bill         @relation(fields: [billId], references: [id], onDelete: Cascade)
+  tests          ReportTest[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("reports")
+}
+
+/// Result rows of a report.
+model ReportTest {
+  id          Int     @id @default(autoincrement())
+  reportId    Int     @map("report_id")
+  testNo      Int     @map("test_no")
+  sortOrder   Int     @default(0) @map("sort_order")
+  testId      Int?    @map("test_id")
+  parameterId Int?    @map("parameter_id")
+  section     String? @db.VarChar(80)
+  name        String  @db.VarChar(255)
+  value       String? @db.VarChar(255)
+  unit        String? @db.VarChar(60)
+  reference   String? @db.VarChar(255)
+  /// H, L, N, C ...
+  flag        String? @db.VarChar(10)
+  report      Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@map("report_tests")
+}
+
+// =====================================================================
+// 7. USG, X-RAY, CT AND OTHER RADIOLOGY REPORTS
+//    modality uses the same keys as the bill form: usg, xray, digitalXray,
+//    ctScan, mri, ...
+// =====================================================================
+
+model RadiologyTemplate {
+  id        Int               @id @default(autoincrement())
+  modality  String            @db.VarChar(30)
+  name      String            @db.VarChar(255)
+  category  String            @default("General") @db.VarChar(80)
+  description String?         @db.VarChar(500)
+  body      String            @db.MediumText
+  active    Boolean           @default(true)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  reports   RadiologyReport[]
+
+  @@index([modality])
+  @@map("radiology_templates")
+}
+
+model RadiologySignature {
+  id             Int               @id @default(autoincrement())
+  modality       String            @db.VarChar(30)
+  doctorName     String            @map("doctor_name") @db.VarChar(255)
+  qualification  String?           @db.VarChar(255)
+  registrationNo String?           @map("registration_no") @db.VarChar(80)
+  email          String?           @db.VarChar(190)
+  signaturePath  String?           @map("signature_path") @db.VarChar(500)
+  isDefault      Boolean           @default(false) @map("is_default")
+  active         Boolean           @default(true)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  reports        RadiologyReport[]
+
+  @@index([modality])
+  @@map("radiology_signatures")
+}
+
+/// One row per scan on a bill (today's cases / search cases).
+model RadiologyReport {
+  id                  Int                 @id @default(autoincrement())
+  billId              Int                 @map("bill_id")
+  billInvestigationId Int?                @map("bill_investigation_id")
+  modality            String              @db.VarChar(30)
+  studyName           String              @map("study_name") @db.VarChar(255)
+  templateId          Int?                @map("template_id")
+  signatureId         Int?                @map("signature_id")
+  findings            String?             @db.MediumText
+  impression          String?             @db.Text
+  status              String              @default("New") @db.VarChar(30)
+  reportedBy          String?             @map("reported_by") @db.VarChar(255)
+  reportedAt          DateTime?           @map("reported_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  bill                Bill                @relation(fields: [billId], references: [id], onDelete: Cascade)
+  template            RadiologyTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  signature           RadiologySignature? @relation(fields: [signatureId], references: [id], onDelete: SetNull)
+  images              RadiologyImage[]
+
+  @@index([billId])
+  @@index([modality, status])
+  @@index([createdAt])
+  @@map("radiology_reports")
+}
+
+model RadiologyImage {
+  id                Int             @id @default(autoincrement())
+  radiologyReportId Int             @map("radiology_report_id")
+  filePath          String          @map("file_path") @db.VarChar(500)
+  caption           String?         @db.VarChar(255)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  report            RadiologyReport @relation(fields: [radiologyReportId], references: [id], onDelete: Cascade)
+
+  @@index([radiologyReportId])
+  @@map("radiology_images")
+}
+
+/// Tests sent to another lab (Cases > Outsource cases).
+model OutsourceCase {
+  id                  Int           @id @default(autoincrement())
+  billId              Int           @map("bill_id")
+  billInvestigationId Int?          @map("bill_investigation_id")
+  outsourceLabId      Int?          @map("outsource_lab_id")
+  testName            String        @map("test_name") @db.VarChar(255)
+  sentAt              DateTime?     @map("sent_at")
+  receivedAt          DateTime?     @map("received_at")
+  cost                Decimal       @default(0) @db.Decimal(12, 2)
+  status              String        @default("Pending") @db.VarChar(30)
+  remarks             String?       @db.Text
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  bill                Bill          @relation(fields: [billId], references: [id], onDelete: Cascade)
+  outsourceLab        OutsourceLab? @relation(fields: [outsourceLabId], references: [id], onDelete: SetNull)
+
+  @@index([billId])
+  @@index([status])
+  @@map("outsource_cases")
+}
+
+// =====================================================================
+// 8. BUSINESS, ACTIVITY AND SUPPORT
+// =====================================================================
+
+model ExpenseCategory {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique @db.VarChar(120)
+  active   Boolean   @default(true)
+  expenses Expense[]
+
+  @@map("expense_categories")
+}
+
+model Expense {
+  id          Int              @id @default(autoincrement())
+  categoryId  Int?             @map("category_id")
+  expenseDate DateTime         @map("expense_date") @db.Date
+  title       String           @db.VarChar(255)
+  amount      Decimal          @default(0) @db.Decimal(12, 2)
+  mode        String           @default("cash") @db.VarChar(30)
+  paidTo      String?          @map("paid_to") @db.VarChar(255)
+  notes       String?          @db.Text
+  createdBy   String?          @map("created_by") @db.VarChar(255)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  category    ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([expenseDate])
+  @@index([categoryId])
+  @@map("expenses")
+}
+
+/// Activity feed (Business > Activities, and a bill's Activities panel).
+model Activity {
+  id        Int      @id @default(autoincrement())
+  billId    Int?     @map("bill_id")
+  userName  String?  @map("user_name") @db.VarChar(255)
+  type      String   @db.VarChar(60)
+  summary   String   @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([billId])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+/// WhatsApp / SMS / email sent to patients.
+model MessageLog {
+  id          Int      @id @default(autoincrement())
+  billId      Int?     @map("bill_id")
+  channel     String   @db.VarChar(20)
+  destination String   @db.VarChar(190)
+  template    String?  @db.VarChar(80)
+  body        String?  @db.Text
+  status      String   @default("sent") @db.VarChar(30)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([billId])
+  @@map("message_logs")
+}
+
+/// Business > Data export history.
+model DataExport {
+  id         Int      @id @default(autoincrement())
+  exportType String   @map("export_type") @db.VarChar(60)
+  params     Json?
+  status     String   @default("pending") @db.VarChar(30)
+  filePath   String?  @map("file_path") @db.VarChar(500)
+  createdBy  String?  @map("created_by") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("data_exports")
+}
+
+/// Manage > Referral program.
+model ReferralProgramInvite {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(40)
+  invitee   String?  @db.VarChar(190)
+  status    String   @default("sent") @db.VarChar(30)
+  reward    String?  @db.VarChar(160)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("referral_program_invites")
+}
+
+/// Help center > Contact support.
+model SupportTicket {
+  id        Int      @id @default(autoincrement())
+  userName  String?  @map("user_name") @db.VarChar(255)
+  email     String?  @db.VarChar(190)
+  subject   String   @db.VarChar(255)
+  message   String   @db.Text
+  status    String   @default("open") @db.VarChar(30)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("support_tickets")
+}
+
+/// Who changed what (for security and audits).
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userName  String?  @map("user_name") @db.VarChar(255)
+  action    String   @db.VarChar(60)
+  entity    String   @db.VarChar(60)
+  entityId  String?  @map("entity_id") @db.VarChar(60)
+  details   Json?
+  ipAddress String?  @map("ip_address") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

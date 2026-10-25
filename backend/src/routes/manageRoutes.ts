@@ -1,129 +1,60 @@
 import { Router } from "express";
-import { store, nextId } from "../store.js";
-import type { Employee } from "../types/domain.js";
-
-interface CreateEmployeeBody {
-  name?: string;
-  email?: string;
-  role?: string;
-  permissions?: unknown;
-}
-
-type UpdateEmployeeBody = Partial<Employee>;
+import { requireRole } from "../middleware/auth.js";
+import * as auth from "../services/authService.js";
+import * as extras from "../services/labExtrasService.js";
+import * as manage from "../services/manageService.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { idParam } from "../utils/validate.js";
 
 const r = Router();
+const owner = requireRole("owner");
 
-// GET all employees
-r.get("/employees", (_req, res) => {
-  res.json({ items: store.employees });
-});
+// ---- employees
+r.get("/employees", asyncHandler(async (_req, res) => res.json({ items: await manage.listEmployees() })));
+r.get("/employees/:id", asyncHandler(async (req, res) => res.json(await manage.getEmployee(idParam(req.params.id)))));
+r.post("/employees", owner, asyncHandler(async (req, res) => res.status(201).json(await manage.createEmployee(req.body))));
+r.patch("/employees/:id", owner, asyncHandler(async (req, res) => res.json(await manage.updateEmployee(idParam(req.params.id), req.body))));
+r.put("/employees/:id/permissions", owner, asyncHandler(async (req, res) =>
+  res.json(await manage.setEmployeePermissions(idParam(req.params.id), req.body?.permissions))));
 
-// CREATE employee
-r.post("/employees", (req, res) => {
-  const { name, email, role, permissions } = req.body as CreateEmployeeBody;
+// ---- my account
+r.get("/profile", asyncHandler(async (req, res) => res.json({ profile: await auth.getProfile(req.auth!.id) })));
+r.put("/profile", asyncHandler(async (req, res) => res.json({ success: true, profile: await auth.updateProfile(req.auth!.id, req.body ?? {}) })));
+r.put("/change-password", asyncHandler(async (req, res) => {
+  await auth.changePassword(req.auth!.id, req.auth!.sessionId, req.body ?? {});
+  res.json({ success: true, message: "Password updated." });
+}));
 
-  if (!name || !email || !role) {
-    res.status(400).json({
-      message: "Name, email, and role are required",
-    });
-    return;
-  }
+// ---- browser security (logged-in devices)
+r.get("/sessions", asyncHandler(async (req, res) => res.json({ items: await auth.listSessions(req.auth!.id, req.auth!.sessionId) })));
+r.delete("/sessions", asyncHandler(async (req, res) =>
+  res.json({ success: true, revoked: await auth.revokeOtherSessions(req.auth!.id, req.auth!.sessionId) })));
+r.delete("/sessions/:id", asyncHandler(async (req, res) => {
+  await auth.revokeSession(req.auth!.id, idParam(req.params.id));
+  res.json({ success: true });
+}));
 
-  const existingEmployee = store.employees.find(
-    (employee) => employee.email?.toLowerCase() === email.toLowerCase(),
-  );
+// ---- lab details
+r.get("/lab-account", asyncHandler(async (_req, res) => res.json({ lab: await manage.getLabAccount() })));
+r.put("/lab-account", owner, asyncHandler(async (req, res) => res.json({ success: true, lab: await manage.saveLabAccount(req.body) })));
+r.post("/labs", owner, asyncHandler(async (req, res) => res.status(201).json({ success: true, lab: await manage.createLab(req.body) })));
 
-  if (existingEmployee) {
-    res.status(409).json({
-      message: "An employee with this email already exists",
-    });
-    return;
-  }
+// ---- preferences and referral program
+r.get("/email-preferences", asyncHandler(async (req, res) => res.json({ preferences: await manage.getEmailPreferences(req.auth!.id) })));
+r.put("/email-preferences", asyncHandler(async (req, res) =>
+  res.json({ success: true, preferences: await manage.saveEmailPreferences(req.auth!.id, req.body) })));
+r.get("/referrals", asyncHandler(async (_req, res) => res.json({ referral: await manage.getReferralProgram() })));
+r.post("/referrals", asyncHandler(async (req, res) => res.status(201).json({ referral: await manage.inviteReferral(req.body) })));
 
-  const employee: Employee = {
-    id: nextId(store.employees),
-    name,
-    email,
-    role,
-    active: true,
-    owner: false,
-    permissions: Array.isArray(permissions) ? (permissions as string[]) : [],
-  };
+// ---- doctor access
+r.get("/doctor-access", owner, asyncHandler(async (_req, res) => res.json({ items: await manage.listDoctorAccess() })));
+r.post("/doctor-access", owner, asyncHandler(async (req, res) => res.status(201).json(await manage.createDoctorAccess(req.body))));
+r.patch("/doctor-access/:id", owner, asyncHandler(async (req, res) => res.json(await manage.updateDoctorAccess(idParam(req.params.id), req.body))));
+r.delete("/doctor-access/:id", owner, asyncHandler(async (req, res) => { await manage.removeDoctorAccess(idParam(req.params.id)); res.status(204).end(); }));
 
-  store.employees.push(employee);
-
-  res.status(201).json(employee);
-});
-
-// UPDATE employee
-r.patch("/employees/:id", (req, res) => {
-  const index = store.employees.findIndex(
-    (employee) => String(employee.id) === String(req.params.id),
-  );
-
-  if (index === -1) {
-    res.status(404).json({
-      message: "Employee not found",
-    });
-    return;
-  }
-
-  const employee = store.employees[index];
-
-  // Prevent clients from changing protected fields here
-  const { id: _id, owner: _owner, permissions: _permissions, ...updates } =
-    req.body as UpdateEmployeeBody;
-
-  if (
-    updates.email &&
-    store.employees.some(
-      (item, i) =>
-        i !== index &&
-        item.email?.toLowerCase() === updates.email!.toLowerCase(),
-    )
-  ) {
-    res.status(409).json({
-      message: "An employee with this email already exists",
-    });
-    return;
-  }
-
-  store.employees[index] = {
-    ...employee,
-    ...updates,
-    id: employee.id,
-    owner: employee.owner,
-    permissions: employee.permissions,
-  };
-
-  res.json(store.employees[index]);
-});
-
-// UPDATE employee permissions
-r.put("/employees/:id/permissions", (req, res) => {
-  const employee = store.employees.find(
-    (item) => String(item.id) === String(req.params.id),
-  );
-
-  if (!employee) {
-    res.status(404).json({
-      message: "Employee not found",
-    });
-    return;
-  }
-
-  const body = req.body as { permissions?: unknown };
-
-  if (!Array.isArray(body.permissions)) {
-    res.status(400).json({
-      message: "Permissions must be an array",
-    });
-    return;
-  }
-
-  employee.permissions = body.permissions as string[];
-
-  res.json(employee);
-});
+// ---- support
+r.get("/support-tickets", asyncHandler(async (_req, res) => res.json({ items: await extras.listTickets() })));
+r.post("/support-tickets", asyncHandler(async (req, res) =>
+  res.status(201).json(await extras.createTicket(req.body, { name: req.auth!.name, email: req.auth!.email }))));
 
 export default r;

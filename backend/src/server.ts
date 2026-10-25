@@ -1,48 +1,35 @@
-import "dotenv/config";
-import express from "express";
-import cors from "cors";
-import healthRoutes from "./routes/healthRoutes.js";
-import authRoutes from "./routes/authRoutes.js";
-import dashboardRoutes from "./routes/dashboardRoutes.js";
-import businessRoutes from "./routes/businessRoutes.js";
-import casesRoutes from "./routes/casesRoutes.js";
-import patientsRoutes from "./routes/patientsRoutes.js";
-import doctorsRoutes from "./routes/doctorsRoutes.js";
-import labRoutes from "./routes/labRoutes.js";
-import usgRoutes from "./routes/usgRoutes.js";
-import xrayRoutes from "./routes/xrayRoutes.js";
-import manageRoutes from "./routes/manageRoutes.js";
-import billingRoutes from "./routes/billingRoutes.js";
-import reportsRoutes from "./routes/reportsRoutes.js";
-import { requestContext } from "./middleware/requestContext.js";
-import { notFound, errorHandler } from "./middleware/errorHandler.js";
+import { createApp } from "./app.js";
+import { bootstrap } from "./bootstrap.js";
+import { assertEnv, env } from "./config/env.js";
+import { prisma } from "./lib/prisma.js";
 
-const app = express();
+async function main() {
+  assertEnv();
 
-app.disable("x-powered-by");
-app.use(cors());
-app.use(express.json({ limit: "2mb" }));
-app.use(requestContext);
+  // Connect to MySQL BEFORE accepting requests. If this fails, nothing starts.
+  await bootstrap();
 
-app.use("/api/health", healthRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/business", businessRoutes);
-app.use("/api/cases", casesRoutes);
-app.use("/api/patients", patientsRoutes);
-app.use("/api/doctors", doctorsRoutes);
-app.use("/api/lab", labRoutes);
-app.use("/api/usg", usgRoutes);
-app.use("/api/xray", xrayRoutes);
-app.use("/api/manage", manageRoutes);
-app.use("/api/billing", billingRoutes);
-app.use("/api/reports", reportsRoutes);
+  const server = createApp().listen(env.port, () =>
+    console.log(`LabLIMS API running on http://localhost:${env.port}  (database connected)`),
+  );
 
-app.use(notFound);
-app.use(errorHandler);
+  const shutdown = (signal: string) => {
+    console.log(`${signal} received, shutting down...`);
+    server.close(async () => {
+      await prisma.$disconnect();
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
 
-const port = Number(process.env.PORT || 4000);
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
 
-app.listen(port, () =>
-  console.log(`LabLIMS API running on http://localhost:${port}`),
-);
+process.on("unhandledRejection", (reason) => console.error("Unhandled rejection:", reason));
+
+main().catch(async (error) => {
+  console.error("Could not start the server:", error instanceof Error ? error.message : error);
+  await prisma.$disconnect().catch(() => undefined);
+  process.exit(1);
+});

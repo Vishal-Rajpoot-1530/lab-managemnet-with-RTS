@@ -1,8 +1,19 @@
 import { Router } from "express";
-import { health } from "../controllers/healthController.js";
+import { prisma } from "../lib/prisma.js";
 
 const r = Router();
 
-r.get("/", health);
+r.get("/", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", database: "connected" });
+  } catch (error) {
+    res.status(503).json({
+      status: "error",
+      database: "unreachable",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
 
 export default r;
