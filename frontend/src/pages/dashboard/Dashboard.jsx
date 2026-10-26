@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
@@ -18,6 +19,8 @@ import {
   CreditCard,
   FlaskConical,
   ChevronRight,
+  X,
+  Search,
 } from "lucide-react";
 
 import "./dashboard.css";
@@ -102,13 +105,40 @@ const kpis = [
   },
 ];
 
+// Sample patient records for the popup.
+// Replace with actual backend data when available.
+const todayPatients = [
+  { id: "37431", name: "Demo Patient 01", age: 28, gender: "Male", tests: "CBC, LFT", status: "In Progress" },
+  { id: "37432", name: "Demo Patient 02", age: 34, gender: "Female", tests: "Thyroid Profile", status: "Registered" },
+  { id: "37433", name: "Demo Patient 03", age: 42, gender: "Male", tests: "Lipid Profile", status: "Completed" },
+  { id: "37434", name: "Demo Patient 04", age: 25, gender: "Female", tests: "Blood Glucose", status: "In Progress" },
+  { id: "37435", name: "Demo Patient 05", age: 51, gender: "Male", tests: "HbA1c", status: "Registered" },
+  { id: "37436", name: "Demo Patient 06", age: 31, gender: "Female", tests: "CBC", status: "Completed" },
+  { id: "37437", name: "Demo Patient 07", age: 39, gender: "Male", tests: "KFT, LFT", status: "In Progress" },
+  { id: "37438", name: "Demo Patient 08", age: 46, gender: "Female", tests: "Vitamin D", status: "Registered" },
+  { id: "37439", name: "Demo Patient 09", age: 29, gender: "Male", tests: "Lipid Profile", status: "Completed" },
+  { id: "37440", name: "Demo Patient 10", age: 36, gender: "Female", tests: "Thyroid Profile", status: "In Progress" },
+];
+
+const completedReports = [
+  { id: "RPT-1001", patient: "Demo Patient 01", test: "Complete Blood Count", time: "09:15 AM", status: "Completed" },
+  { id: "RPT-1002", patient: "Demo Patient 02", test: "Liver Function Test", time: "09:30 AM", status: "Completed" },
+  { id: "RPT-1003", patient: "Demo Patient 03", test: "Thyroid Profile", time: "09:45 AM", status: "Completed" },
+  { id: "RPT-1004", patient: "Demo Patient 04", test: "Blood Glucose", time: "10:00 AM", status: "Completed" },
+  { id: "RPT-1005", patient: "Demo Patient 05", test: "Lipid Profile", time: "10:20 AM", status: "Completed" },
+  { id: "RPT-1006", patient: "Demo Patient 06", test: "HbA1c", time: "10:40 AM", status: "Completed" },
+  { id: "RPT-1007", patient: "Demo Patient 07", test: "Kidney Function Test", time: "11:00 AM", status: "Completed" },
+  { id: "RPT-1008", patient: "Demo Patient 08", test: "Vitamin D", time: "11:25 AM", status: "Completed" },
+  { id: "RPT-1009", patient: "Demo Patient 09", test: "Lipid Profile", time: "11:45 AM", status: "Completed" },
+  { id: "RPT-1010", patient: "Demo Patient 10", test: "Thyroid Profile", time: "12:10 PM", status: "Completed" },
+];
+
 function Panel({ title, subtitle, viewAll, children }) {
   return (
     <section className="dash-panel">
       <div className="dash-panel-head">
         <div>
           <h3>{title}</h3>
-
           {subtitle && <small>{subtitle}</small>}
         </div>
 
@@ -129,9 +159,25 @@ function Panel({ title, subtitle, viewAll, children }) {
   );
 }
 
-function KpiCard({ label, value, meta, icon: Icon, tone }) {
+// Updated KPI card: only the first two cards are clickable.
+function KpiCard({ label, value, meta, icon: Icon, tone, onClick }) {
+  const clickable = Boolean(onClick);
+
   return (
-    <article className="dash-kpi">
+    <article
+      className={`dash-kpi ${clickable ? "dash-kpi-clickable" : ""}`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (clickable && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-haspopup={clickable ? "dialog" : undefined}
+      title={clickable ? `View ${label.toLowerCase()} list` : undefined}
+    >
       <div className={`dash-kpi-icon ${tone}`}>
         <Icon size={19} strokeWidth={2} />
       </div>
@@ -144,13 +190,193 @@ function KpiCard({ label, value, meta, icon: Icon, tone }) {
           <TrendingUp size={12} />
           {meta}
         </small>
+
+        {clickable && (
+          <span className="dash-kpi-hint">
+            Click to view list →
+          </span>
+        )}
       </div>
     </article>
   );
 }
 
+// New searchable and scrollable popup.
+function RecordsModal({ type, onClose }) {
+  const [search, setSearch] = useState("");
+
+  const isPatients = type === "patients";
+  const records = isPatients ? todayPatients : completedReports;
+
+  const title = isPatients
+    ? "Today's patients"
+    : "Completed reports";
+
+  const subtitle = isPatients
+    ? "Patient registrations and test details"
+    : "Reports completed by the laboratory today";
+
+  const filteredRecords = records.filter((record) =>
+    Object.values(record)
+      .join(" ")
+      .toLowerCase()
+      .includes(search.trim().toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  return (
+    <div
+      className="dash-modal-overlay"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className="dash-record-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dash-modal-title"
+      >
+        <header className="dash-modal-header">
+          <div className="dash-modal-heading">
+            <div className={`dash-modal-icon ${isPatients ? "blue" : "green"}`}>
+              {isPatients ? <Users size={22} /> : <FileText size={22} />}
+            </div>
+
+            <div>
+              <h2 id="dash-modal-title">{title}</h2>
+              <p>{subtitle}</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="dash-modal-close"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            <X size={20} />
+          </button>
+        </header>
+
+        <div className="dash-modal-toolbar">
+          <div className="dash-modal-search">
+            <Search size={18} />
+
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={
+                isPatients
+                  ? "Search patient, ID, test or status..."
+                  : "Search patient, report ID or test..."
+              }
+              aria-label={`Search ${title}`}
+            />
+
+            {search && (
+              <button
+                type="button"
+                className="dash-search-clear"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          <span className="dash-modal-count">
+            {filteredRecords.length} of {records.length}
+          </span>
+        </div>
+
+        <div className="dash-modal-list">
+          {filteredRecords.length > 0 ? (
+            filteredRecords.map((record) => {
+              const name = isPatients ? record.name : record.patient;
+              const details = isPatients
+                ? `${record.id} · ${record.age} years · ${record.gender}`
+                : `${record.id} · ${record.time}`;
+              const test = isPatients ? record.tests : record.test;
+              const statusClass = record.status.toLowerCase().replace(/\s+/g, "-");
+
+              return (
+                <article className="dash-modal-record" key={record.id}>
+                  <div className="dash-record-avatar">
+                    {name
+                      .split(" ")
+                      .map((part) => part[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()}
+                  </div>
+
+                  <div className="dash-record-info">
+                    <strong>{name}</strong>
+                    <span>{details}</span>
+                    <small>{test}</small>
+                  </div>
+
+                  <span className={`dash-record-status ${statusClass}`}>
+                    {record.status}
+                  </span>
+                </article>
+              );
+            })
+          ) : (
+            <div className="dash-modal-empty">
+              <Search size={28} />
+              <strong>No records found</strong>
+              <p>Try another name, ID, test, or status.</p>
+
+              <button type="button" onClick={() => setSearch("")}>
+                Clear search
+              </button>
+            </div>
+          )}
+        </div>
+
+        <footer className="dash-modal-footer">
+          <span>
+            Showing {filteredRecords.length}{" "}
+            {isPatients ? "patients" : "reports"}
+          </span>
+
+          <button
+            type="button"
+            className="dash-modal-done"
+            onClick={onClose}
+          >
+            Done
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [activeModal, setActiveModal] = useState(null);
 
   const today = new Intl.DateTimeFormat("en-IN", {
     weekday: "long",
@@ -186,16 +412,13 @@ export default function Dashboard() {
   return (
     <div className="dash-page">
       <div className="dash-shell">
-
-        {/* HEADER */}
+        {/* HEADER - unchanged */}
         <header className="dash-header">
           <div className="dash-header-copy">
             <div className="dash-eyebrow">
               <FlaskConical size={14} />
               LABORATORY OVERVIEW
             </div>
-
-          
 
             <p>
               Here is what is happening across your laboratory today.
@@ -205,7 +428,6 @@ export default function Dashboard() {
           <div className="dash-header-meta">
             <div className="dash-date">
               <CalendarDays size={17} />
-
               <div>
                 <span>Today</span>
                 <strong>{today}</strong>
@@ -224,7 +446,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* KPI CARDS */}
+        {/* KPI CARDS - only click handlers added */}
         <section className="dash-kpi-grid">
           {kpis.map((item) => (
             <KpiCard
@@ -234,11 +456,18 @@ export default function Dashboard() {
               meta={item.meta}
               icon={item.icon}
               tone={item.tone}
+              onClick={
+                item.label === "Today's patients"
+                  ? () => setActiveModal("patients")
+                  : item.label === "Reports completed"
+                    ? () => setActiveModal("reports")
+                    : undefined
+              }
             />
           ))}
         </section>
 
-        {/* QUICK ACTIONS */}
+        {/* QUICK ACTIONS - unchanged */}
         <section className="dash-quick-grid">
           {quick.map((item) => {
             const Icon = item.icon;
@@ -259,24 +488,16 @@ export default function Dashboard() {
                   <small>{item.description}</small>
                 </span>
 
-                <ArrowRight
-                  size={16}
-                  className="dash-arrow"
-                />
+                <ArrowRight size={16} className="dash-arrow" />
               </button>
             );
           })}
         </section>
 
-        {/* MAIN LAYOUT */}
+        {/* MAIN LAYOUT - unchanged */}
         <div className="dash-layout">
-
-          {/* MAIN COLUMN */}
           <main className="dash-main">
-
-            {/* PAYMENTS + TRANSACTIONS */}
             <div className="dash-two">
-
               {/* PAYMENTS DUE */}
               <Panel
                 title="Payments due"
@@ -302,9 +523,7 @@ export default function Dashboard() {
                         </small>
                       </div>
 
-                      <span className="dash-due">
-                        {item[3]}
-                      </span>
+                      <span className="dash-due">{item[3]}</span>
 
                       <button
                         type="button"
@@ -339,15 +558,10 @@ export default function Dashboard() {
                     >
                       <div className="dash-patient">
                         <strong>{item[0]}</strong>
-
-                        <small>
-                          Reg. no. {item[1]}
-                        </small>
+                        <small>Reg. no. {item[1]}</small>
                       </div>
 
-                      <span className="dash-positive">
-                        {item[2]}
-                      </span>
+                      <span className="dash-positive">{item[2]}</span>
 
                       <button
                         type="button"
@@ -378,9 +592,7 @@ export default function Dashboard() {
                       className="dash-activity-item"
                       key={`${item.title}-${index}`}
                     >
-                      <span
-                        className={`dash-activity-icon ${item.tone}`}
-                      >
+                      <span className={`dash-activity-icon ${item.tone}`}>
                         <Icon size={16} />
                       </span>
 
@@ -400,24 +612,18 @@ export default function Dashboard() {
             </Panel>
           </main>
 
-          {/* SIDEBAR */}
+          {/* SIDEBAR - unchanged */}
           <aside className="dash-side">
-
-
-            {/* DEMO */}
             <div className="dash-demo">
               <div className="dash-demo-top">
                 <span className="dash-demo-icon">
                   <CalendarDays size={17} />
                 </span>
 
-                <span className="dash-demo-status">
-                  Scheduled
-                </span>
+                <span className="dash-demo-status">Scheduled</span>
               </div>
 
               <h3>Product demo</h3>
-
               <p>
                 Your scheduled demo details and meeting
                 information can appear here.
@@ -432,11 +638,8 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* REFERRAL */}
             <div className="dash-refer">
-              <div className="dash-refer-label">
-                REFERRAL PROGRAM
-              </div>
+              <div className="dash-refer-label">REFERRAL PROGRAM</div>
 
               <h2>
                 Refer a lab
@@ -470,23 +673,22 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* FOOTER LINKS */}
             <div className="dash-links">
-              <button type="button">
-                Terms &amp; Conditions
-              </button>
-
-              <button type="button">
-                Privacy Policy
-              </button>
-
-              <button type="button">
-                Refund Policy
-              </button>
+              <button type="button">Terms &amp; Conditions</button>
+              <button type="button">Privacy Policy</button>
+              <button type="button">Refund Policy</button>
             </div>
           </aside>
         </div>
       </div>
+
+      {/* NEW MODAL - rendered only when a clickable KPI is selected */}
+      {activeModal && (
+        <RecordsModal
+          type={activeModal}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
     </div>
   );
 }

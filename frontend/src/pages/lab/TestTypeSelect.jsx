@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import "./test-database.css";
+import "./testtype.css";
 const types = [
   ["single", "Single parameter", "Eg. HB, TLC"],
   ["multi", "Multiple parameters", "Eg. DLC, Blood group"],

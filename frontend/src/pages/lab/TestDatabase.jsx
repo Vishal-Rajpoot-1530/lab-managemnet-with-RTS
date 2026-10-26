@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import LabTable, { Action } from "./LabTable";
 import testApiService from "../../api/services/testApiService";
 import testCategoryApiService from "../../api/services/testCategoryApiService";
-import "./lab.css";
+// import "./lab.css";
 import "./test-database.css";
 
 const unwrap = (r) =>
