@@ -1,7 +1,6 @@
 
-
 import { useEffect, useState } from "react";
-import { labApi } from "../../api/core/apiAuth";
+import { manageApiService } from "../../api";
 
 import { authApi } from "../../api/core/apiAuth";
 import "./manage.css";
@@ -114,7 +113,7 @@ export default function LabAccount() {
   const [newLabError, setNewLabError] = useState("");
 
   useEffect(() => {
-    labApi
+    manageApiService.lab
       .get()
       .then((data) => setLab({ ...EMPTY_LAB, ...data }))
       .catch((err) => handleAuthError(err) || setError(err.message))
@@ -129,7 +128,7 @@ export default function LabAccount() {
     if (!lab.labName.trim()) return setError("Laboratory name is required.");
     setSaving(true);
     try {
-      setLab({ ...EMPTY_LAB, ...(await labApi.save(lab)) });
+      setLab({ ...EMPTY_LAB, ...(await manageApiService.lab.save(lab)) });
       setToast("Lab account saved.");
     } catch (err) {
       if (!handleAuthError(err)) setError(err.message);
@@ -144,7 +143,7 @@ export default function LabAccount() {
     if (!newLab.labName.trim()) return setNewLabError("Laboratory name is required.");
     setSaving(true);
     try {
-      const created = await labApi.create(newLab);
+      const created = await manageApiService.lab.create(newLab);
       setNewLabOpen(false);
       setNewLab(EMPTY_NEW);
       setToast(`${created.labName} was added (ID ${created.labId}).`);

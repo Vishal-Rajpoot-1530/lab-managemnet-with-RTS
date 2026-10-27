@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LabTable, { Action } from "./LabTable";
-import { interpretationApi } from "../../api/core/apiAuth"; // adjust the path to where apiAuth.js lives
+import { interpretationApiService } from "../../api";
 import "./lab.css";
 
 const EMPTY_FORM = { kind: "Test", linkId: "", name: "", text: "" };
@@ -36,7 +36,7 @@ export default function Interpretations() {
   const load = useCallback(async () => {
     setLoadError("");
     try {
-      setItems(await interpretationApi.list());
+      setItems(await interpretationApiService.list());
     } catch (err) {
       if (err.status === 401) return window.location.assign("/login");
       setLoadError(err.message);
@@ -48,8 +48,8 @@ export default function Interpretations() {
   useEffect(() => {
     load();
     // Optional link targets. If these routes differ the dropdowns are simply empty.
-    interpretationApi.tests().then(setTests).catch(() => {});
-    interpretationApi.panels().then(setPanels).catch(() => {});
+    interpretationApiService.tests().then(setTests).catch(() => {});
+    interpretationApiService.panels().then(setPanels).catch(() => {});
   }, [load]);
 
   useEffect(() => {
@@ -113,8 +113,8 @@ export default function Interpretations() {
     setSaving(true);
     try {
       const saved = selected
-        ? await interpretationApi.update(selected.id, payload)
-        : await interpretationApi.create(payload);
+        ? await interpretationApiService.update(selected.id, payload)
+        : await interpretationApiService.create(payload);
 
       setItems((current) =>
         selected ? current.map((i) => (i.id === saved.id ? saved : i)) : [saved, ...current]
@@ -133,7 +133,7 @@ export default function Interpretations() {
   async function confirmDelete() {
     setSaving(true);
     try {
-      await interpretationApi.remove(selected.id);
+      await interpretationApiService.remove(selected.id);
       setItems((current) => current.filter((i) => i.id !== selected.id));
       close();
       setToast("Interpretation deleted.");

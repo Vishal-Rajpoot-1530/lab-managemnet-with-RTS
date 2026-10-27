@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { doctorAccessApi } from "../../api/core/apiAuth";
+import { manageApiService } from "../../api";
 
 import { authApi } from "../../api/core/apiAuth";
 import "./manage.css";
@@ -129,7 +129,7 @@ export default function DoctorAccess() {
   useEffect(() => {
     if (sessionLoading) return;
     if (!isAdmin) { setLoading(false); return; }
-    doctorAccessApi
+    manageApiService.doctorAccess
       .list()
       .then(setRows)
       .catch((err) => handleAuthError(err) || setLoadError(err.message))
@@ -183,22 +183,22 @@ export default function DoctorAccess() {
 
     if (modal === "add") {
       run(async () => {
-        const row = await doctorAccessApi.create({ ...payload, email });
+        const row = await manageApiService.doctorAccess.create({ ...payload, email });
         setRows((cur) => [...cur, row]);
       }, () => { close(); setToast("Doctor access created."); });
     } else {
-      run(async () => replace(await doctorAccessApi.update(selected.id, payload)),
+      run(async () => replace(await manageApiService.doctorAccess.update(selected.id, payload)),
         () => { close(); setToast("Doctor access updated."); });
     }
   }
 
   const toggleActive = (row) =>
-    run(async () => replace(await doctorAccessApi.update(row.id, { active: !row.active })),
+    run(async () => replace(await manageApiService.doctorAccess.update(row.id, { active: !row.active })),
       () => setToast(row.active ? `${row.name} has been blocked.` : `${row.name} is active again.`));
 
   const confirmRemove = () =>
     run(async () => {
-      await doctorAccessApi.remove(selected.id);
+      await manageApiService.doctorAccess.remove(selected.id);
       setRows((cur) => cur.filter((r) => r.id !== selected.id));
     }, () => { close(); setToast("Doctor access removed."); });
 

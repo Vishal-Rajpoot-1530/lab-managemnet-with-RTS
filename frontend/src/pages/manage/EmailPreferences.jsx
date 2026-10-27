@@ -1,7 +1,5 @@
-
-
 import { useEffect, useState } from "react";
-import { emailPrefsApi } from "../../api/core/apiAuth";
+import { manageApiService } from "../../api";
 
 import "./manage.css";
 
@@ -68,7 +66,7 @@ export default function EmailPreferences() {
   const [toast, setToast] = useToast();
 
   useEffect(() => {
-    emailPrefsApi
+    manageApiService.emailPreferences
       .get()
       .then(setPrefs)
       .catch((err) => handleAuthError(err) || setError(err.message));
@@ -79,7 +77,7 @@ export default function EmailPreferences() {
     setError("");
     setSaving(true);
     try {
-      setPrefs(await emailPrefsApi.save(prefs));
+      setPrefs(await manageApiService.emailPreferences.save(prefs));
       setToast("Email preferences saved.");
     } catch (err) {
       if (!handleAuthError(err)) setError(err.message);

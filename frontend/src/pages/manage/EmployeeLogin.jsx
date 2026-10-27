@@ -1,7 +1,6 @@
-
-
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { authApi, employeesApi } from "../../api/core/apiAuth";
+import { authApi } from "../../api/core/apiAuth";
+import { manageApiService } from "../../api";
 import "./manage.css";
 
 const PERMISSIONS = [
@@ -179,7 +178,7 @@ export default function EmployeeLogin() {
         const { user } = await authApi.me();
         setMe(user);
         if (canManage(user)) {
-          const employees = await employeesApi.list();
+          const employees = await manageApiService.employees.list();
           setRows(employees.map(toRow));
         }
       } catch (err) {
@@ -245,7 +244,7 @@ export default function EmployeeLogin() {
     setSaving(true);
     try {
       const employee = toRow(
-        await employeesApi.create({
+        await manageApiService.employees.create({
           name,
           email,
           mobile,
@@ -273,7 +272,7 @@ export default function EmployeeLogin() {
   async function toggleStatus(employee) {
     setMenuId(null);
     try {
-      const updated = toRow(await employeesApi.update(employee.id, { active: !employee.active }));
+      const updated = toRow(await manageApiService.employees.update(employee.id, { active: !employee.active }));
       setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
       notify(
         updated.active
@@ -290,7 +289,7 @@ export default function EmployeeLogin() {
     if (!selected) return;
     setSaving(true);
     try {
-      const updated = toRow(await employeesApi.update(selected.id, { role: selected.permission }));
+      const updated = toRow(await manageApiService.employees.update(selected.id, { role: selected.permission }));
       setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
       setModal(null);
       setSelected(null);

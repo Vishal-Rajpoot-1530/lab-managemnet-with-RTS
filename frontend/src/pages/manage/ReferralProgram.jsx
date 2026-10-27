@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { referralApi } from "../../api/core/apiAuth";
+import { manageApiService } from "../../api";
 
 import "./manage.css";
 
@@ -67,7 +67,7 @@ export default function ReferralProgram() {
   const [toast, setToast] = useToast();
 
   useEffect(() => {
-    referralApi
+    manageApiService.referrals
       .get()
       .then(setData)
       .catch((err) => handleAuthError(err) || setError(err.message));
@@ -88,7 +88,7 @@ export default function ReferralProgram() {
     if (!invitee.trim()) return setError("Enter an email address or lab name.");
     setSending(true);
     try {
-      setData(await referralApi.invite(invitee.trim()));
+      setData(await manageApiService.referrals.invite(invitee.trim()));
       setInvitee("");
       setToast("Invitation sent.");
     } catch (err) {
