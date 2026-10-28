@@ -176,7 +176,9 @@ export default function Header() {
       {/* BRAND */}
       <div className="brand">
         <img src={logo} alt="LabLIMS Logo" />
-        <b>LabLIMS</b>
+        <span className="lp-brand-text">
+           LAB<span>LIMS</span>
+          </span>
       </div>
 
       {/* SEARCH */}

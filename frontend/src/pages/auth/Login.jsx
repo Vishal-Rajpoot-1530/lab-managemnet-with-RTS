@@ -13,7 +13,7 @@ import Input from "../../components/common/Input";
 import PasswordInput from "../../components/common/PasswordInput";
 import Button from "../../components/common/Button";
 import "./auth.css";
-
+import labLimsLogo from "../../assets/logo2.png";
 import { authApi } from "../../api/core/apiAuth";
 
 export default function EmployeeLogin() {
@@ -57,12 +57,16 @@ export default function EmployeeLogin() {
       {/* ================= LEFT SIDE ================= */}
       <section className="auth-visual">
         <div className="auth-visual-brand">
-          <div className="auth-logo-mark">
-            <FlaskConical size={23} />
-          </div>
+         <div className="auth-logo-mark">
+         <img src={labLimsLogo} alt="LabLIMS Logo" />
+         </div>
 
           <div>
-            <div className="auth-logo">LabLIMS</div>
+            <div className="auth-logo">
+              <span className="lp-brand-text">
+           LAB<span>LIMS</span>
+          </span>
+            </div>
             <div className="auth-logo-caption">
               Laboratory Management System
             </div>
@@ -109,14 +113,6 @@ export default function EmployeeLogin() {
             from one secure workspace.
           </p>
         </div>
-
-        <div className="auth-visual-footer">
-          <span>Secure</span>
-          <span>•</span>
-          <span>Reliable</span>
-          <span>•</span>
-          <span>Efficient</span>
-        </div>
       </section>
 
       {/* ================= RIGHT SIDE ================= */}
@@ -124,8 +120,8 @@ export default function EmployeeLogin() {
         <div className="auth-login-container">
           <div className="auth-mobile-brand">
             <div className="auth-logo-mark">
-              <FlaskConical size={20} />
-            </div>
+            <img src={labLimsLogo} alt="LabLIMS Logo" />
+          </div>
 
             <span>LabLIMS</span>
           </div>

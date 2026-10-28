@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import Landing from "../pages/LandingPage/Landing.jsx";
 
-
 import {
   LabSettings,
   ReportSettings,
@@ -82,7 +81,6 @@ import XraySearch from "../pages/xray/SearchCases.jsx";
 import XrayTemplates from "../pages/xray/ReportTemplates.jsx";
 import XraySignatures from "../pages/xray/Signatures.jsx";
 
-
 import HelpCenter from "../components/header/HelpCenter";
 import ContactSupport from "../components/header/ContactSupport";
 // =========================
@@ -112,69 +110,38 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
 
-      <Route
-        path="/forgot-password"
-        element={<ForgotPassword />}
-      />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       <Route path="/email-otp" element={<EmailOtp />} />
       <Route path="/sms-otp" element={<SmsOtp />} />
 
-      <Route
-        path="/account-locked"
-        element={<AccountLocked />}
-      />
+      <Route path="/account-locked" element={<AccountLocked />} />
 
       {/* =========================
           MAIN APPLICATION
       ========================= */}
       <Route element={<RequireAuth />}>
-
         <Route element={<AppLayout />}>
           {/* Dashboard */}
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route
-            path="/getting-started"
-            element={<GettingStarted />}
-          />
+          <Route path="/getting-started" element={<GettingStarted />} />
 
           {/* Business */}
-          <Route
-            path="/business/daily"
-            element={<DailyBusiness />}
-          />
+          <Route path="/business/daily" element={<DailyBusiness />} />
 
-          <Route
-            path="/business/expenses"
-            element={<Expenses />}
-          />
+          <Route path="/business/expenses" element={<Expenses />} />
 
-          <Route
-            path="/business/due-reports"
-            element={<DueReports />}
-          />
+          <Route path="/business/due-reports" element={<DueReports />} />
 
-          <Route
-            path="/business/activities"
-            element={<Activities />}
-          />
+          <Route path="/business/activities" element={<Activities />} />
 
           <Route path="/help-center" element={<HelpCenter />} />
           <Route path="/contact-support" element={<ContactSupport />} />
 
-          <Route
-            path="/business/referral"
-            element={<ReferralBusiness />}
-          />
+          <Route path="/business/referral" element={<ReferralBusiness />} />
 
-          <Route
-            path="/business/case-wise"
-            element={<CaseWiseReport />}
-          />
+          <Route path="/business/case-wise" element={<CaseWiseReport />} />
 
           <Route path="/settings/lab" element={<LabSettings />} />
           <Route path="/settings/reports" element={<ReportSettings />} />
@@ -184,32 +151,16 @@ export default function AppRoutes() {
             element={<NotificationSettings />}
           />
 
+          <Route path="/business/analysis" element={<BusinessAnalysis />} />
 
-          <Route
-            path="/business/analysis"
-            element={<BusinessAnalysis />}
-          />
-
-          <Route
-            path="/business/export"
-            element={<DataExport />}
-          />
+          <Route path="/business/export" element={<DataExport />} />
 
           {/* Manage - Account Settings */}
-          <Route
-            path="/manage/my-account"
-            element={<MyAccount />}
-          />
+          <Route path="/manage/my-account" element={<MyAccount />} />
 
-          <Route
-            path="/manage/lab-account"
-            element={<LabAccount />}
-          />
+          <Route path="/manage/lab-account" element={<LabAccount />} />
 
-          <Route
-            path="/manage/setup-lab"
-            element={<SetupLab />}
-          />
+          <Route path="/manage/setup-lab" element={<SetupLab />} />
 
           <Route
             path="/manage/referral-program"
@@ -222,155 +173,70 @@ export default function AppRoutes() {
           />
 
           {/* Cases */}
-          <Route
-            path="/cases/new-bill"
-            element={<NewBill />}
-          />
+          <Route path="/cases/new-bill" element={<NewBill />} />
 
-          <Route
-            path="/cases/bills"
-            element={<Bills />}
-          />
+          <Route path="/cases/bills" element={<Bills />} />
 
-          <Route
-            path="/cases/bills/:id/modify"
-            element={<NewBill />}
-          />
+          <Route path="/cases/bills/:id/modify" element={<NewBill />} />
 
-          <Route
-            path="/cases/outsource"
-            element={<OutsourceCases />}
-          />
+          <Route path="/cases/outsource" element={<OutsourceCases />} />
 
-          <Route
-            path="/cases/ct-scan"
-            element={<CTScanCases />}
-          />
+          <Route path="/cases/ct-scan" element={<CTScanCases />} />
 
-          <Route
-            path="/cases/patients"
-            element={<Patients />}
-          />
+          <Route path="/cases/patients" element={<Patients />} />
 
-          <Route
-            path="/cases/transactions"
-            element={<Transactions />}
-          />
+          <Route path="/cases/transactions" element={<Transactions />} />
 
-          <Route
-            path="/cases/referral-doctors"
-            element={<ReferralDoctors />}
-          />
+          <Route path="/cases/referral-doctors" element={<ReferralDoctors />} />
 
-          <Route
-            path="/cases/agents"
-            element={<Agents />}
-          />
+          <Route path="/cases/agents" element={<Agents />} />
 
-          <Route
-            path="/cases/bill-details/:id"
-            element={<BillDetails />}
-          />
+          <Route path="/cases/bill-details/:id" element={<BillDetails />} />
 
           {/* Laboratory */}
-          <Route
-            path="/lab/today"
-            element={<TodayReports />}
-          />
+          <Route path="/lab/today" element={<TodayReports />} />
 
-          <Route
-            path="/lab/search"
-            element={<SearchReports />}
-          />
+          <Route path="/lab/search" element={<SearchReports />} />
 
-          <Route
-            path="/lab/packages"
-            element={<TestPackages />}
-          />
+          <Route path="/lab/packages" element={<TestPackages />} />
 
-          <Route
-            path="/lab/panels"
-            element={<TestPanels />}
-          />
+          <Route path="/lab/panels" element={<TestPanels />} />
 
-          <Route
-            path="/lab/categories"
-            element={<TestCategories />}
-          />
+          <Route path="/lab/categories" element={<TestCategories />} />
 
-          <Route
-            path="/lab/tests"
-            element={<TestDatabase />}
-          />
+          <Route path="/lab/tests" element={<TestDatabase />} />
 
-          <Route
-            path="/lab/tests/select-type"
-            element={<TestTypeSelect />}
-          />
+          <Route path="/lab/tests/select-type" element={<TestTypeSelect />} />
 
-          <Route
-            path="/lab/tests/new/:type"
-            element={<TestForm />}
-          />
+          <Route path="/lab/tests/new/:type" element={<TestForm />} />
 
-          <Route
-            path="/lab/tests/:id/edit/:type"
-            element={<TestForm />}
-          />
+          <Route path="/lab/tests/:id/edit/:type" element={<TestForm />} />
 
-          <Route
-            path="/lab/interpretations"
-            element={<Interpretations />}
-          />
+          <Route path="/lab/tests/:id/view/:type" element={<TestForm />} />
 
-          <Route
-            path="/lab/counts"
-            element={<TestCounts />}
-          />
+          <Route path="/lab/interpretations" element={<Interpretations />} />
+
+          <Route path="/lab/counts" element={<TestCounts />} />
 
           {/* USG */}
-          <Route
-            path="/usg/today"
-            element={<UsgToday />}
-          />
+          <Route path="/usg/today" element={<UsgToday />} />
 
           <Route path="/lab/reports/bill/:billId" element={<LabReport />} />
 
-          <Route
-            path="/usg/search"
-            element={<UsgSearch />}
-          />
+          <Route path="/usg/search" element={<UsgSearch />} />
 
-          <Route
-            path="/usg/templates"
-            element={<UsgTemplates />}
-          />
+          <Route path="/usg/templates" element={<UsgTemplates />} />
 
-          <Route
-            path="/usg/signatures"
-            element={<UsgSignatures />}
-          />
+          <Route path="/usg/signatures" element={<UsgSignatures />} />
 
           {/* Digital X-Ray */}
-          <Route
-            path="/xray/today"
-            element={<XrayToday />}
-          />
+          <Route path="/xray/today" element={<XrayToday />} />
 
-          <Route
-            path="/xray/search"
-            element={<XraySearch />}
-          />
+          <Route path="/xray/search" element={<XraySearch />} />
 
-          <Route
-            path="/xray/templates"
-            element={<XrayTemplates />}
-          />
+          <Route path="/xray/templates" element={<XrayTemplates />} />
 
-          <Route
-            path="/xray/signatures"
-            element={<XraySignatures />}
-          />
+          <Route path="/xray/signatures" element={<XraySignatures />} />
 
           {/* Manage - Security and Access */}
           <Route
@@ -378,27 +244,17 @@ export default function AppRoutes() {
             element={<BrowserSecurity />}
           />
 
-          <Route
-            path="/manage/employees"
-            element={<EmployeeLogin />}
-          />
+          <Route path="/manage/employees" element={<EmployeeLogin />} />
 
-          <Route
-            path="/manage/doctor-access"
-            element={<DoctorAccess />}
-          />
+          <Route path="/manage/doctor-access" element={<DoctorAccess />} />
         </Route>
       </Route>
 
-
-        {/* =========================
+      {/* =========================
           FALLBACK
       ========================= */}
 
-        <Route
-          path="*"
-          element={<Navigate to="/" replace />}
-        />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

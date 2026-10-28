@@ -1,10 +1,8 @@
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LabTable, { Action } from "./LabTable";
 import testApiService from "../../api/services/testApiService";
 import testCategoryApiService from "../../api/services/testCategoryApiService";
-// import "./lab.css";
 import "./test-database.css";
 
 const unwrap = (r) =>
@@ -53,19 +51,16 @@ export default function TestDatabase() {
 
         const matchesSearch =
           !search ||
-          [
-            x.name,
-            x.shortName,
-            x.typeLabel,
-            x.categoryName,
-            x.order,
-          ].some((value) =>
-            String(value ?? "").toLowerCase().includes(search)
+          [x.name, x.shortName, x.typeLabel, x.categoryName, x.order].some(
+            (value) =>
+              String(value ?? "")
+                .toLowerCase()
+                .includes(search),
           );
 
         return matchesCategory && matchesSearch;
       }),
-    [tests, cat, q]
+    [tests, cat, q],
   );
 
   const categoryCounts = useMemo(() => {
@@ -83,9 +78,7 @@ export default function TestDatabase() {
     {
       key: "order",
       label: "S. NO.",
-      render: (v, r, i) => (
-        <span className="td-order">{v || i + 1}</span>
-      ),
+      render: (v, r, i) => <span className="td-order">{v || i + 1}</span>,
     },
     {
       key: "name",
@@ -95,9 +88,7 @@ export default function TestDatabase() {
     {
       key: "typeLabel",
       label: "TEST TYPE",
-      render: (v) => (
-        <span className="td-type-badge">{v || "—"}</span>
-      ),
+      render: (v) => <span className="td-type-badge">{v || "—"}</span>,
     },
     {
       key: "shortName",
@@ -117,7 +108,8 @@ export default function TestDatabase() {
           <Action onClick={() => nav(`/lab/tests/${r.id}/edit/${r.type}`)}>
             ✎ Edit
           </Action>
-          <Action onClick={() => nav(`/lab/tests/${r.id}/edit/${r.type}`)}>
+
+          <Action onClick={() => nav(`/lab/tests/${r.id}/view/${r.type}`)}>
             ◉ View
           </Action>
         </div>

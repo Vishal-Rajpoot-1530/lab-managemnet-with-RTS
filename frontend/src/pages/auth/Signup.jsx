@@ -13,7 +13,7 @@ import AuthCard from "../../components/common/AuthCard";
 import Input from "../../components/common/Input";
 import PasswordInput from "../../components/common/PasswordInput";
 import Button from "../../components/common/Button";
-
+import labLimsLogo from "../../assets/logo2.png";
 import "./auth.css";
 
 export default function Signup() {
@@ -54,12 +54,14 @@ export default function Signup() {
         <div className="auth-visual-brand">
 
           <div className="auth-logo-mark">
-            <FlaskConical size={23} />
-          </div>
+                   <img src={labLimsLogo} alt="LabLIMS Logo" />
+                   </div>
 
           <div>
             <div className="auth-logo">
-              LabLIMS
+              <span className="lp-brand-text">
+           LAB<span>LIMS</span>
+          </span>
             </div>
 
             <div className="auth-logo-caption">
@@ -118,18 +120,7 @@ export default function Signup() {
             investigations, reports and laboratory workflows
             from one secure workspace.
           </p>
-
-        </div>
-
-
-        <div className="auth-visual-footer">
-          <span>Secure</span>
-          <span>•</span>
-          <span>Reliable</span>
-          <span>•</span>
-          <span>Efficient</span>
-        </div>
-
+       </div>
       </section>
 
 

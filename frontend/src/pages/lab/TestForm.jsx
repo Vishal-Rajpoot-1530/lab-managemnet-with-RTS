@@ -1,12 +1,15 @@
+
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import testCategoryApiService from "../../api/services/testCategoryApiService";
 import unitApiService from "../../api/services/unitApiService";
 import inputTypeApiService from "../../api/services/inputTypeApiService";
 import testApiService from "../../api/services/testApiService";
 import "./Testform.css";
+
 const unwrap = (r) =>
   Array.isArray(r) ? r : r?.data || r?.items || r?.rows || [];
+
 const emptyParam = (order = 1) => ({
   order,
   name: "",
@@ -17,19 +20,28 @@ const emptyParam = (order = 1) => ({
   optional: false,
   parentIndex: null,
 });
+
 export default function TestForm() {
-  const { type, id } = useParams(),
-    nav = useNavigate(),
-    editing = !!id;
-  const [categories, setCategories] = useState([]),
-    [units, setUnits] = useState([]),
-    [inputTypes, setInputTypes] = useState([]),
-    [unitModal, setUnitModal] = useState(false),
-    [unitName, setUnitName] = useState(""),
-    [unitError, setUnitError] = useState(""),
-    [savingUnit, setSavingUnit] = useState(false),
-    [error, setError] = useState(""),
-    [saving, setSaving] = useState(false);
+  const { type, id } = useParams();
+  const nav = useNavigate();
+  const location = useLocation();
+
+  const viewing = location.pathname.includes("/view/");
+  const editing = Boolean(id) && !viewing;
+
+  const [categories, setCategories] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [inputTypes, setInputTypes] = useState([]);
+
+  const [unitModal, setUnitModal] = useState(false);
+  const [unitName, setUnitName] = useState("");
+  const [unitError, setUnitError] = useState("");
+  const [savingUnit, setSavingUnit] = useState(false);
+
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loadingTest, setLoadingTest] = useState(Boolean(id));
+
   const [f, setF] = useState({
     type: type || "single",
     name: "",
@@ -46,74 +58,145 @@ export default function TestForm() {
     interpretation: "",
     parameters: [emptyParam(1), emptyParam(2)],
   });
+
+  // Read-only mode disables form controls.
+  const fieldState = viewing ? { disabled: true } : {};
+
+  // Load categories, units and input types.
   useEffect(() => {
+    let active = true;
+
     Promise.all([
       testCategoryApiService.list(),
       unitApiService.list(),
       inputTypeApiService.list(),
     ])
       .then(([c, u, i]) => {
+        if (!active) return;
+
         setCategories(unwrap(c));
         setUnits(unwrap(u));
         setInputTypes(unwrap(i));
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        if (active) {
+          setError(e?.message || "Unable to load form options.");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  // Load the selected test for both Edit and View.
   useEffect(() => {
-    if (editing)
-      testApiService
-        .getById(id)
-        .then((r) => {
-          const x = r?.data || r;
-          setF({
-            ...f,
-            ...x,
-            type: x.type || type,
-            parameters: x.parameters?.length ? x.parameters : f.parameters,
-          });
-        })
-        .catch((e) => setError(e.message));
-  }, [editing, id]);
-  const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
-  const setP = (idx, k, v) =>
-    setF((x) => ({
-      ...x,
-      parameters: x.parameters.map((p, i) =>
-        i === idx ? { ...p, [k]: v } : p,
+    let active = true;
+
+    if (!id) {
+      setLoadingTest(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setLoadingTest(true);
+    setError("");
+
+    testApiService
+      .getById(id)
+      .then((r) => {
+        if (!active) return;
+
+        const x = r?.data || r;
+
+        setF((prev) => ({
+          ...prev,
+          ...x,
+          type: x.type || type || prev.type,
+          parameters:
+            Array.isArray(x.parameters) && x.parameters.length
+              ? x.parameters
+              : prev.parameters,
+        }));
+      })
+      .catch((e) => {
+        if (active) {
+          setError(e?.message || "Unable to load test details.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingTest(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id, type]);
+
+  const set = (key, value) => {
+    if (viewing) return;
+    setF((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const setP = (idx, key, value) => {
+    if (viewing) return;
+
+    setF((prev) => ({
+      ...prev,
+      parameters: prev.parameters.map((p, i) =>
+        i === idx ? { ...p, [key]: value } : p
       ),
     }));
+  };
+
   async function addUnit(e) {
     e.preventDefault();
+
+    if (viewing) return;
+
     if (!unitName.trim()) {
       setUnitError("Please enter the unit name.");
       return;
     }
+
     setSavingUnit(true);
+
     try {
       await unitApiService.create({ name: unitName.trim() });
+
       const r = await unitApiService.list();
       setUnits(unwrap(r));
+
       setUnitName("");
       setUnitError("");
       setUnitModal(false);
     } catch (e) {
-      setUnitError(e.message);
+      setUnitError(e?.message || "Unable to create unit.");
     } finally {
       setSavingUnit(false);
     }
   }
+
   async function submit(e) {
     e.preventDefault();
+
+    // Never submit changes in View mode.
+    if (viewing || saving) return;
+
     if (!f.name.trim()) {
       setError("Please enter the test name.");
       return;
     }
+
     if (!f.categoryId) {
       setError("Please select a category.");
       return;
     }
+
     setSaving(true);
     setError("");
+
     try {
       const payload = {
         ...f,
@@ -128,33 +211,51 @@ export default function TestForm() {
             }))
           : [],
       };
-      editing
-        ? await testApiService.update(id, payload)
-        : await testApiService.create(payload);
+
+      if (editing) {
+        await testApiService.update(id, payload);
+      } else {
+        await testApiService.create(payload);
+      }
+
       nav("/lab/tests");
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || "Unable to save test.");
     } finally {
       setSaving(false);
     }
   }
+
   const unitSelect = (value, onChange) => (
     <div className="td-unit">
-      <select value={value || ""} onChange={(e) => onChange(e.target.value)}>
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        {...fieldState}
+      >
         <option value="">Select unit</option>
+
         {units.map((u) => (
           <option key={u.id} value={u.id}>
             {u.name}
           </option>
         ))}
       </select>
-      <button type="button" onClick={() => setUnitModal(true)}>
-        ＋ Add new
-      </button>
+
+      {!viewing && (
+        <button type="button" onClick={() => setUnitModal(true)}>
+          ＋ Add new
+        </button>
+      )}
     </div>
   );
+
   const inputSelect = (value, onChange) => (
-    <select value={value || ""} onChange={(e) => onChange(e.target.value)}>
+    <select
+      value={value || ""}
+      onChange={(e) => onChange(e.target.value)}
+      {...fieldState}
+    >
       {inputTypes.map((x) => (
         <option key={x.value} value={x.value}>
           {x.label}
@@ -162,47 +263,94 @@ export default function TestForm() {
       ))}
     </select>
   );
-  return (
-    <div className="td-page">
-      <div className="td-crumb">
-        Test database › Select type ›{" "}
-        {editing
-          ? "Edit test"
-          : `New test (${f.type === "single" ? "single parameter" : f.type === "multi" ? "multi parameter" : f.type === "nested" ? "multi parameter nested" : "document"})`}
+
+  const testTypeLabel =
+    f.type === "single"
+      ? "single parameter"
+      : f.type === "multi"
+        ? "multi parameter"
+        : f.type === "nested"
+          ? "multi parameter nested"
+          : "document";
+
+  const pageTitle = viewing
+    ? "View test"
+    : editing
+      ? "Edit test"
+      : `New test (${testTypeLabel})`;
+
+  if (loadingTest) {
+    return (
+      <div className="td-page">
+        <div className="td-loading">
+          <span className="td-spinner" />
+          <span>Loading test details...</span>
+        </div>
       </div>
-      <h1>
-        {editing
-          ? "Edit test"
-          : `New test (${f.type === "single" ? "single parameter" : f.type === "multi" ? "multi parameter" : f.type === "nested" ? "multi parameter nested" : "document"})`}
-      </h1>
+    );
+  }
+
+  return (
+    <div className={`td-page ${viewing ? "td-view-mode" : ""}`}>
+      <div className="td-crumb">
+        Test database › {viewing ? "View test" : editing ? "Edit test" : "New test"}
+      </div>
+
+      <div className="td-form-page-heading">
+        <div>
+          <h1>{pageTitle}</h1>
+
+          <p className="td-note">
+            {viewing
+              ? "You are viewing this test in read-only mode. No changes can be made."
+              : "ⓘ Ratelist entry will be created for this test automatically."}
+          </p>
+        </div>
+
+        {viewing && (
+          <span className="td-view-badge">
+            <span aria-hidden="true">◉</span> Read-only
+          </span>
+        )}
+      </div>
+
       <h3>Test details</h3>
-      <p className="td-note">
-        ⓘ Ratelist entry will be created for this test automatically.
-      </p>
-      {error && <div className="td-error">{error}</div>}
+
+      {error && (
+        <div className="td-error" role="alert">
+          {error}
+        </div>
+      )}
+
       <form onSubmit={submit} className="td-form">
         <div className="td-grid">
           <label>
             Name
             <input
-              value={f.name}
+              value={f.name ?? ""}
               onChange={(e) => set("name", e.target.value)}
+              {...fieldState}
             />
           </label>
+
           <label>
             Short name
             <input
-              value={f.shortName}
+              value={f.shortName ?? ""}
               onChange={(e) => set("shortName", e.target.value)}
+              {...fieldState}
             />
           </label>
+
           <label>
             Category
             <select
-              value={f.categoryId}
+              value={f.categoryId ?? ""}
               onChange={(e) => set("categoryId", e.target.value)}
+              {...fieldState}
             >
               <option value="">Select category</option>
+
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -210,194 +358,273 @@ export default function TestForm() {
               ))}
             </select>
           </label>
+
           {f.type === "nested" && (
             <label>
               Template
-              <select>
+              <select disabled>
                 <option>default</option>
               </select>
             </label>
           )}
+
           <label>
             Price
             <input
               type="number"
               min="0"
               step="0.01"
-              value={f.price}
+              value={f.price ?? ""}
               onChange={(e) => set("price", e.target.value)}
+              {...fieldState}
             />
           </label>
         </div>
+
         {f.type === "single" && (
           <>
             <div className="td-grid td-gap">
-              <label>Unit{unitSelect(f.unitId, (v) => set("unitId", v))}</label>
               <label>
-                Input type{inputSelect(f.inputType, (v) => set("inputType", v))}
+                Unit
+                {unitSelect(f.unitId, (v) => set("unitId", v))}
+              </label>
+
+              <label>
+                Input type
+                {inputSelect(f.inputType, (v) => set("inputType", v))}
               </label>
             </div>
+
             <label className="td-wide">
               Default result
               <textarea
-                value={f.defaultResult}
+                value={f.defaultResult ?? ""}
                 onChange={(e) => set("defaultResult", e.target.value)}
+                {...fieldState}
               />
             </label>
+
             <label className="td-check">
               <input
                 type="checkbox"
-                checked={f.optional}
+                checked={Boolean(f.optional)}
                 onChange={(e) => set("optional", e.target.checked)}
+                {...fieldState}
               />{" "}
               Optional
             </label>
           </>
         )}
+
         {["multi", "nested"].includes(f.type) && (
           <section className="td-parameters">
             <h3>Parameters</h3>
+
             {f.parameters.map((p, idx) => (
               <div className="td-param" key={idx}>
-                <button
-                  type="button"
-                  className="td-remove"
-                  onClick={() =>
-                    setF((x) => ({
-                      ...x,
-                      parameters: x.parameters.filter((_, i) => i !== idx),
-                    }))
-                  }
-                >
-                  − Remove
-                </button>
+                {!viewing && (
+                  <button
+                    type="button"
+                    className="td-remove"
+                    onClick={() =>
+                      setF((prev) => ({
+                        ...prev,
+                        parameters: prev.parameters.filter(
+                          (_, i) => i !== idx
+                        ),
+                      }))
+                    }
+                  >
+                    − Remove
+                  </button>
+                )}
+
                 <label>
                   Order
                   <input
                     type="number"
-                    value={p.order}
+                    value={p.order ?? ""}
                     onChange={(e) => setP(idx, "order", e.target.value)}
+                    {...fieldState}
                   />
                 </label>
+
                 <label>
                   Name
                   <input
-                    value={p.name}
+                    value={p.name ?? ""}
                     onChange={(e) => setP(idx, "name", e.target.value)}
+                    {...fieldState}
                   />
                 </label>
+
                 <label>
-                  Unit{unitSelect(p.unitId, (v) => setP(idx, "unitId", v))}
+                  Unit
+                  {unitSelect(p.unitId, (v) => setP(idx, "unitId", v))}
                 </label>
+
                 <label>
                   Input type
-                  {inputSelect(p.inputType, (v) => setP(idx, "inputType", v))}
+                  {inputSelect(p.inputType, (v) =>
+                    setP(idx, "inputType", v)
+                  )}
                 </label>
+
                 {f.type === "nested" && (
                   <label>
                     Group By
                     <input
-                      value={p.groupBy}
+                      value={p.groupBy ?? ""}
                       onChange={(e) => setP(idx, "groupBy", e.target.value)}
+                      {...fieldState}
                     />
                   </label>
                 )}
+
                 <label>
                   Default result
                   <textarea
-                    value={p.defaultResult}
-                    onChange={(e) => setP(idx, "defaultResult", e.target.value)}
+                    value={p.defaultResult ?? ""}
+                    onChange={(e) =>
+                      setP(idx, "defaultResult", e.target.value)
+                    }
+                    {...fieldState}
                   />
                 </label>
+
                 <label className="td-check">
                   <input
                     type="checkbox"
-                    checked={p.optional}
+                    checked={Boolean(p.optional)}
                     onChange={(e) => setP(idx, "optional", e.target.checked)}
+                    {...fieldState}
                   />{" "}
                   Optional
                 </label>
               </div>
             ))}
-            <button
-              type="button"
-              className="td-link"
-              onClick={() =>
-                setF((x) => ({
-                  ...x,
-                  parameters: [
-                    ...x.parameters,
-                    emptyParam(x.parameters.length + 1),
-                  ],
-                }))
-              }
-            >
-              ＋ Add more parameters
-            </button>
+
+            {!viewing && (
+              <button
+                type="button"
+                className="td-link"
+                onClick={() =>
+                  setF((prev) => ({
+                    ...prev,
+                    parameters: [
+                      ...prev.parameters,
+                      emptyParam(prev.parameters.length + 1),
+                    ],
+                  }))
+                }
+              >
+                ＋ Add more parameters
+              </button>
+            )}
           </section>
         )}
+
         {f.type === "document" && (
           <>
             <label className="td-check">
               <input
                 type="checkbox"
-                checked={f.displayName}
+                checked={Boolean(f.displayName)}
                 onChange={(e) => set("displayName", e.target.checked)}
+                {...fieldState}
               />{" "}
               Display test name in report
             </label>
+
             <label className="td-editor">
               Default result
               <textarea
-                value={f.defaultResult}
+                value={f.defaultResult ?? ""}
                 onChange={(e) => set("defaultResult", e.target.value)}
+                {...fieldState}
               />
             </label>
           </>
         )}
+
         {f.type !== "document" && (
           <>
             <div className="td-tabs">
               More details <span>Format options</span>
             </div>
+
             <div className="td-grid">
               <label>
                 Method
                 <input
-                  value={f.method}
+                  value={f.method ?? ""}
                   onChange={(e) => set("method", e.target.value)}
+                  {...fieldState}
                 />
               </label>
+
               <label>
                 Instrument
                 <input
-                  value={f.instrument}
+                  value={f.instrument ?? ""}
                   onChange={(e) => set("instrument", e.target.value)}
+                  {...fieldState}
                 />
               </label>
             </div>
+
             <label className="td-editor">
               Interpretation
               <textarea
-                value={f.interpretation}
+                value={f.interpretation ?? ""}
                 onChange={(e) => set("interpretation", e.target.value)}
+                {...fieldState}
               />
             </label>
           </>
         )}
-        <button className="td-save" disabled={saving}>
-          {saving ? "Saving..." : "Save"}
-        </button>
+
+        <div className="td-form-actions">
+          {viewing ? (
+            <>
+              <button
+                type="button"
+                className="td-save td-back-button"
+                onClick={() => nav("/lab/tests")}
+              >
+                ← Back to tests
+              </button>
+
+              <button
+                type="button"
+                className="td-save"
+                onClick={() => nav(`/lab/tests/${id}/edit/${f.type || type}`)}
+              >
+                ✎ Edit this test
+              </button>
+            </>
+          ) : (
+            <button className="td-save" type="submit" disabled={saving}>
+              {saving ? "Saving..." : editing ? "Save changes" : "Save"}
+            </button>
+          )}
+        </div>
       </form>
-      {unitModal && (
+
+      {!viewing && unitModal && (
         <div className="td-overlay">
           <form className="td-modal" onSubmit={addUnit}>
             <div className="td-modal-head">
               <b>Add new Unit</b>
-              <button type="button" onClick={() => setUnitModal(false)}>
+
+              <button
+                type="button"
+                onClick={() => setUnitModal(false)}
+              >
                 ×
               </button>
             </div>
+
             <label>
               * Unit
               <input
@@ -409,7 +636,11 @@ export default function TestForm() {
                 }}
               />
             </label>
-            {unitError && <small className="td-field-error">{unitError}</small>}
+
+            {unitError && (
+              <small className="td-field-error">{unitError}</small>
+            )}
+
             <button className="td-save" disabled={savingUnit}>
               {savingUnit ? "Creating..." : "Create"}
             </button>
