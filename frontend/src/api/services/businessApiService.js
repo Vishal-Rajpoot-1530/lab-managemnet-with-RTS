@@ -1,30 +1,3 @@
-// import apiClient from "../core/apiClient";
-// import { API_CONFIG } from "../config/apiConfig";
-// import { cleanQuery, unwrap } from "../core/apiUnwrap";
-
-// const E = API_CONFIG.ENDPOINTS.BUSINESS;
-
-// export const businessApiService = {
-//   daily: (query) => apiClient.get(E.DAILY, { query }),
-//   monthly: (query) => apiClient.get(E.MONTHLY, { query }),
-//   referralReports: (query) => apiClient.get(E.REFERRAL_REPORTS, { query }),
-
-//   // Reports > Business Reports > Case Wise Report
-//   caseWiseOptions: async () => unwrap(await apiClient.get(E.CASE_WISE_OPTIONS), "options"),
-//   caseWiseReport: async ({ date, centre, types, excludeCancelled }) =>
-//     unwrap(
-//       await apiClient.get(E.CASE_WISE_REPORT, {
-//         query: cleanQuery({ date, centre, types: types.join(","), excludeCancelled: String(excludeCancelled) }),
-//       }),
-//       "report",
-//     ),
-// };
-
-// export default businessApiService;
-
-
-
-
 import apiClient from "../core/apiClient";
 import { API_CONFIG } from "../config/apiConfig";
 import { asList, cleanQuery, unwrap } from "../core/apiUnwrap";
