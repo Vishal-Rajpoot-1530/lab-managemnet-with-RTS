@@ -1,11 +1,12 @@
-
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import testCategoryApiService from "../../api/services/testCategoryApiService";
 import unitApiService from "../../api/services/unitApiService";
 import inputTypeApiService from "../../api/services/inputTypeApiService";
 import testApiService from "../../api/services/testApiService";
+import labLogo from "../../assets/logo2.png";
 import "./Testform.css";
+import "./Testform-view.css";
 
 const unwrap = (r) =>
   Array.isArray(r) ? r : r?.data || r?.items || r?.rows || [];
@@ -59,9 +60,6 @@ export default function TestForm() {
     parameters: [emptyParam(1), emptyParam(2)],
   });
 
-  // Read-only mode disables form controls.
-  const fieldState = viewing ? { disabled: true } : {};
-
   // Load categories, units and input types.
   useEffect(() => {
     let active = true;
@@ -73,15 +71,12 @@ export default function TestForm() {
     ])
       .then(([c, u, i]) => {
         if (!active) return;
-
         setCategories(unwrap(c));
         setUnits(unwrap(u));
         setInputTypes(unwrap(i));
       })
       .catch((e) => {
-        if (active) {
-          setError(e?.message || "Unable to load form options.");
-        }
+        if (active) setError(e?.message || "Unable to load form options.");
       });
 
     return () => {
@@ -107,7 +102,6 @@ export default function TestForm() {
       .getById(id)
       .then((r) => {
         if (!active) return;
-
         const x = r?.data || r;
 
         setF((prev) => ({
@@ -121,9 +115,7 @@ export default function TestForm() {
         }));
       })
       .catch((e) => {
-        if (active) {
-          setError(e?.message || "Unable to load test details.");
-        }
+        if (active) setError(e?.message || "Unable to load test details.");
       })
       .finally(() => {
         if (active) setLoadingTest(false);
@@ -141,7 +133,6 @@ export default function TestForm() {
 
   const setP = (idx, key, value) => {
     if (viewing) return;
-
     setF((prev) => ({
       ...prev,
       parameters: prev.parameters.map((p, i) =>
@@ -152,7 +143,6 @@ export default function TestForm() {
 
   async function addUnit(e) {
     e.preventDefault();
-
     if (viewing) return;
 
     if (!unitName.trim()) {
@@ -161,13 +151,10 @@ export default function TestForm() {
     }
 
     setSavingUnit(true);
-
     try {
       await unitApiService.create({ name: unitName.trim() });
-
       const r = await unitApiService.list();
       setUnits(unwrap(r));
-
       setUnitName("");
       setUnitError("");
       setUnitModal(false);
@@ -180,8 +167,6 @@ export default function TestForm() {
 
   async function submit(e) {
     e.preventDefault();
-
-    // Never submit changes in View mode.
     if (viewing || saving) return;
 
     if (!f.name.trim()) {
@@ -231,31 +216,22 @@ export default function TestForm() {
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        {...fieldState}
       >
         <option value="">Select unit</option>
-
         {units.map((u) => (
           <option key={u.id} value={u.id}>
             {u.name}
           </option>
         ))}
       </select>
-
-      {!viewing && (
-        <button type="button" onClick={() => setUnitModal(true)}>
-          ＋ Add new
-        </button>
-      )}
+      <button type="button" onClick={() => setUnitModal(true)}>
+        ＋ Add new
+      </button>
     </div>
   );
 
   const inputSelect = (value, onChange) => (
-    <select
-      value={value || ""}
-      onChange={(e) => onChange(e.target.value)}
-      {...fieldState}
-    >
+    <select value={value || ""} onChange={(e) => onChange(e.target.value)}>
       {inputTypes.map((x) => (
         <option key={x.value} value={x.value}>
           {x.label}
@@ -273,11 +249,9 @@ export default function TestForm() {
           ? "multi parameter nested"
           : "document";
 
-  const pageTitle = viewing
-    ? "View test"
-    : editing
-      ? "Edit test"
-      : `New test (${testTypeLabel})`;
+  const pageTitle = editing
+    ? "Edit test"
+    : `New test (${testTypeLabel})`;
 
   if (loadingTest) {
     return (
@@ -290,37 +264,267 @@ export default function TestForm() {
     );
   }
 
+  // ---------- READ-ONLY VIEW HELPERS ----------
+  const displayValue = (value) => {
+    if (value === null || value === undefined || String(value).trim() === "") {
+      return "Not specified";
+    }
+    return String(value);
+  };
+
+  const categoryName =
+    categories.find((c) => String(c.id) === String(f.categoryId))?.name ||
+    "Not specified";
+
+  const unitNameFor = (unitId) =>
+    units.find((u) => String(u.id) === String(unitId))?.name ||
+    "No unit selected";
+
+  const inputTypeName = (value) =>
+    inputTypes.find((item) => item.value === value)?.label ||
+    displayValue(value);
+
+  const typeName = {
+    single: "Single parameter",
+    multi: "Multiple parameters",
+    nested: "Nested parameters",
+    document: "Document",
+  }[f.type] || "Test";
+
+  if (viewing) {
+    const detail = (label, value) => (
+      <div className="td-view-field" key={label}>
+        <span className="td-view-label">{label}</span>
+        <div className="td-view-value">{displayValue(value)}</div>
+      </div>
+    );
+
+    const resultBlock = (label, value) => (
+      <div className="td-view-result" key={label}>
+        <span className="td-view-label">{label}</span>
+        <div className="td-view-result-content">{displayValue(value)}</div>
+      </div>
+    );
+
+    return (
+      <div className="td-page td-view-mode">
+        <div className="td-view-brandbar">
+          <div className="td-view-brand">
+            <img src={labLogo} alt="LabLIMS logo" />
+            <div className="td-view-brand-copy">
+              <strong>LabLIMS</strong>
+              <span>Laboratory Information Management System</span>
+            </div>
+          </div>
+          <div className="td-view-record-mark">
+            <span className="td-view-record-mark-dot" />
+            Test record
+          </div>
+        </div>
+
+        <div className="td-crumb">
+          <span>Test database</span><span className="td-view-crumb-separator">/</span><strong>View test details</strong>
+        </div>
+
+        {error && <div className="td-error" role="alert">{error}</div>}
+
+        <header className="td-view-header">
+          <div className="td-view-heading-main">
+            <div className="td-view-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                width="26"
+                height="26"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5z" />
+                <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20" />
+                <path d="M8 7h8M8 11h6" />
+              </svg>
+            </div>
+            <div>
+              <h1>{displayValue(f.name)}</h1>
+              <p>Complete configuration details for review. Editing is disabled in this view.</p>
+            </div>
+          </div>
+
+          <div className="td-view-header-right">
+            <span className="td-view-badge">
+              <span className="td-view-status-dot" />
+              Read-only
+            </span>
+            <span className="td-view-type-badge">{typeName}</span>
+          </div>
+        </header>
+        <section className="td-view-card">
+          <div className="td-view-card-heading">
+            <div className="td-view-section-icon">01</div>
+            <div>
+              <h2>Basic information</h2>
+              <p>Identity and classification of this test.</p>
+            </div>
+          </div>
+          <div className="td-view-grid">
+            {detail("Test name", f.name)}
+            {detail("Short name", f.shortName)}
+            {detail("Category", categoryName)}
+            {detail("Test type", typeName)}
+            {detail(
+              "Price",
+              f.price === "" || f.price == null
+                ? "Not specified"
+                : `₹${Number(f.price).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`
+            )}
+          </div>
+        </section>
+
+        {f.type === "single" && (
+          <section className="td-view-card">
+            <div className="td-view-card-heading">
+              <div className="td-view-section-icon">02</div>
+              <div>
+                <h2>Result configuration</h2>
+                <p>Measurement and result input settings.</p>
+              </div>
+            </div>
+            <div className="td-view-grid">
+              {detail("Unit", unitNameFor(f.unitId))}
+              {detail("Input type", inputTypeName(f.inputType))}
+              {detail("Optional parameter", f.optional ? "Yes" : "No")}
+            </div>
+            {resultBlock("Default result", f.defaultResult)}
+          </section>
+        )}
+
+        {["multi", "nested"].includes(f.type) && (
+          <section className="td-view-card">
+            <div className="td-view-card-heading">
+              <div className="td-view-section-icon">02</div>
+              <div>
+                <h2>Test parameters</h2>
+                <p>
+                  {(f.parameters || []).length} parameter
+                  {(f.parameters || []).length === 1 ? "" : "s"} configured
+                  for this test.
+                </p>
+              </div>
+              <span className="td-view-count">
+                {(f.parameters || []).length} total
+              </span>
+            </div>
+
+            {(f.parameters || []).length > 0 ? (
+              <div className="td-view-parameters">
+                {f.parameters.map((p, idx) => (
+                  <article className="td-view-parameter" key={idx}>
+                    <div className="td-view-parameter-heading">
+                      <div className="td-view-parameter-number">
+                        {String(idx + 1).padStart(2, "0")}
+                      </div>
+                      <div className="td-view-parameter-title">
+                        <h3>{displayValue(p.name)}</h3>
+                        <span>Parameter order: {displayValue(p.order)}</span>
+                      </div>
+                      <span
+                        className={`td-view-optional ${
+                          p.optional ? "is-optional" : ""
+                        }`}
+                      >
+                        {p.optional ? "Optional" : "Required"}
+                      </span>
+                    </div>
+                    <div className="td-view-grid">
+                      {detail("Unit", unitNameFor(p.unitId))}
+                      {detail("Input type", inputTypeName(p.inputType))}
+                      {f.type === "nested" && detail("Group by", p.groupBy)}
+                    </div>
+                    {resultBlock("Default result", p.defaultResult)}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="td-view-empty">
+                No parameters have been configured for this test.
+              </div>
+            )}
+          </section>
+        )}
+
+        {f.type === "document" && (
+          <section className="td-view-card">
+            <div className="td-view-card-heading">
+              <div className="td-view-section-icon">02</div>
+              <div>
+                <h2>Document configuration</h2>
+                <p>Report display preferences and default content.</p>
+              </div>
+            </div>
+            <div className="td-view-grid">
+              {detail(
+                "Display test name in report",
+                f.displayName ? "Yes" : "No"
+              )}
+            </div>
+            {resultBlock("Default result", f.defaultResult)}
+          </section>
+        )}
+
+        {f.type !== "document" && (
+          <section className="td-view-card">
+            <div className="td-view-card-heading">
+              <div className="td-view-section-icon">03</div>
+              <div>
+                <h2>Additional details</h2>
+                <p>Methodology, instruments, and interpretation.</p>
+              </div>
+            </div>
+            <div className="td-view-grid">
+              {detail("Method", f.method)}
+              {detail("Instrument", f.instrument)}
+            </div>
+            {resultBlock("Interpretation", f.interpretation)}
+          </section>
+        )}
+
+        <footer className="td-view-footer">
+          <button
+            type="button"
+            className="td-view-back"
+            onClick={() => nav("/lab/tests")}
+          >
+            <span aria-hidden="true">←</span> Back to tests
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
+  // ---------- EXISTING NEW / EDIT FORM ----------
   return (
-    <div className={`td-page ${viewing ? "td-view-mode" : ""}`}>
+    <div className="td-page">
       <div className="td-crumb">
-        Test database › {viewing ? "View test" : editing ? "Edit test" : "New test"}
+        Test database › {editing ? "Edit test" : "New test"}
       </div>
 
       <div className="td-form-page-heading">
         <div>
           <h1>{pageTitle}</h1>
-
           <p className="td-note">
-            {viewing
-              ? "You are viewing this test in read-only mode. No changes can be made."
-              : "ⓘ Ratelist entry will be created for this test automatically."}
+            ⓘ Ratelist entry will be created for this test automatically.
           </p>
         </div>
-
-        {viewing && (
-          <span className="td-view-badge">
-            <span aria-hidden="true">◉</span> Read-only
-          </span>
-        )}
       </div>
 
       <h3>Test details</h3>
 
-      {error && (
-        <div className="td-error" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <div className="td-error" role="alert">{error}</div>}
 
       <form onSubmit={submit} className="td-form">
         <div className="td-grid">
@@ -329,7 +533,6 @@ export default function TestForm() {
             <input
               value={f.name ?? ""}
               onChange={(e) => set("name", e.target.value)}
-              {...fieldState}
             />
           </label>
 
@@ -338,7 +541,6 @@ export default function TestForm() {
             <input
               value={f.shortName ?? ""}
               onChange={(e) => set("shortName", e.target.value)}
-              {...fieldState}
             />
           </label>
 
@@ -347,10 +549,8 @@ export default function TestForm() {
             <select
               value={f.categoryId ?? ""}
               onChange={(e) => set("categoryId", e.target.value)}
-              {...fieldState}
             >
               <option value="">Select category</option>
-
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -376,7 +576,6 @@ export default function TestForm() {
               step="0.01"
               value={f.price ?? ""}
               onChange={(e) => set("price", e.target.value)}
-              {...fieldState}
             />
           </label>
         </div>
@@ -388,7 +587,6 @@ export default function TestForm() {
                 Unit
                 {unitSelect(f.unitId, (v) => set("unitId", v))}
               </label>
-
               <label>
                 Input type
                 {inputSelect(f.inputType, (v) => set("inputType", v))}
@@ -400,7 +598,6 @@ export default function TestForm() {
               <textarea
                 value={f.defaultResult ?? ""}
                 onChange={(e) => set("defaultResult", e.target.value)}
-                {...fieldState}
               />
             </label>
 
@@ -409,7 +606,6 @@ export default function TestForm() {
                 type="checkbox"
                 checked={Boolean(f.optional)}
                 onChange={(e) => set("optional", e.target.checked)}
-                {...fieldState}
               />{" "}
               Optional
             </label>
@@ -419,25 +615,20 @@ export default function TestForm() {
         {["multi", "nested"].includes(f.type) && (
           <section className="td-parameters">
             <h3>Parameters</h3>
-
             {f.parameters.map((p, idx) => (
               <div className="td-param" key={idx}>
-                {!viewing && (
-                  <button
-                    type="button"
-                    className="td-remove"
-                    onClick={() =>
-                      setF((prev) => ({
-                        ...prev,
-                        parameters: prev.parameters.filter(
-                          (_, i) => i !== idx
-                        ),
-                      }))
-                    }
-                  >
-                    − Remove
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="td-remove"
+                  onClick={() =>
+                    setF((prev) => ({
+                      ...prev,
+                      parameters: prev.parameters.filter((_, i) => i !== idx),
+                    }))
+                  }
+                >
+                  − Remove
+                </button>
 
                 <label>
                   Order
@@ -445,7 +636,6 @@ export default function TestForm() {
                     type="number"
                     value={p.order ?? ""}
                     onChange={(e) => setP(idx, "order", e.target.value)}
-                    {...fieldState}
                   />
                 </label>
 
@@ -454,7 +644,6 @@ export default function TestForm() {
                   <input
                     value={p.name ?? ""}
                     onChange={(e) => setP(idx, "name", e.target.value)}
-                    {...fieldState}
                   />
                 </label>
 
@@ -465,9 +654,7 @@ export default function TestForm() {
 
                 <label>
                   Input type
-                  {inputSelect(p.inputType, (v) =>
-                    setP(idx, "inputType", v)
-                  )}
+                  {inputSelect(p.inputType, (v) => setP(idx, "inputType", v))}
                 </label>
 
                 {f.type === "nested" && (
@@ -476,7 +663,6 @@ export default function TestForm() {
                     <input
                       value={p.groupBy ?? ""}
                       onChange={(e) => setP(idx, "groupBy", e.target.value)}
-                      {...fieldState}
                     />
                   </label>
                 )}
@@ -485,10 +671,7 @@ export default function TestForm() {
                   Default result
                   <textarea
                     value={p.defaultResult ?? ""}
-                    onChange={(e) =>
-                      setP(idx, "defaultResult", e.target.value)
-                    }
-                    {...fieldState}
+                    onChange={(e) => setP(idx, "defaultResult", e.target.value)}
                   />
                 </label>
 
@@ -497,30 +680,27 @@ export default function TestForm() {
                     type="checkbox"
                     checked={Boolean(p.optional)}
                     onChange={(e) => setP(idx, "optional", e.target.checked)}
-                    {...fieldState}
                   />{" "}
                   Optional
                 </label>
               </div>
             ))}
 
-            {!viewing && (
-              <button
-                type="button"
-                className="td-link"
-                onClick={() =>
-                  setF((prev) => ({
-                    ...prev,
-                    parameters: [
-                      ...prev.parameters,
-                      emptyParam(prev.parameters.length + 1),
-                    ],
-                  }))
-                }
-              >
-                ＋ Add more parameters
-              </button>
-            )}
+            <button
+              type="button"
+              className="td-link"
+              onClick={() =>
+                setF((prev) => ({
+                  ...prev,
+                  parameters: [
+                    ...prev.parameters,
+                    emptyParam(prev.parameters.length + 1),
+                  ],
+                }))
+              }
+            >
+              ＋ Add more parameters
+            </button>
           </section>
         )}
 
@@ -531,17 +711,14 @@ export default function TestForm() {
                 type="checkbox"
                 checked={Boolean(f.displayName)}
                 onChange={(e) => set("displayName", e.target.checked)}
-                {...fieldState}
               />{" "}
               Display test name in report
             </label>
-
             <label className="td-editor">
               Default result
               <textarea
                 value={f.defaultResult ?? ""}
                 onChange={(e) => set("defaultResult", e.target.value)}
-                {...fieldState}
               />
             </label>
           </>
@@ -552,75 +729,45 @@ export default function TestForm() {
             <div className="td-tabs">
               More details <span>Format options</span>
             </div>
-
             <div className="td-grid">
               <label>
                 Method
                 <input
                   value={f.method ?? ""}
                   onChange={(e) => set("method", e.target.value)}
-                  {...fieldState}
                 />
               </label>
-
               <label>
                 Instrument
                 <input
                   value={f.instrument ?? ""}
                   onChange={(e) => set("instrument", e.target.value)}
-                  {...fieldState}
                 />
               </label>
             </div>
-
             <label className="td-editor">
               Interpretation
               <textarea
                 value={f.interpretation ?? ""}
                 onChange={(e) => set("interpretation", e.target.value)}
-                {...fieldState}
               />
             </label>
           </>
         )}
 
         <div className="td-form-actions">
-          {viewing ? (
-            <>
-              <button
-                type="button"
-                className="td-save td-back-button"
-                onClick={() => nav("/lab/tests")}
-              >
-                ← Back to tests
-              </button>
-
-              <button
-                type="button"
-                className="td-save"
-                onClick={() => nav(`/lab/tests/${id}/edit/${f.type || type}`)}
-              >
-                ✎ Edit this test
-              </button>
-            </>
-          ) : (
-            <button className="td-save" type="submit" disabled={saving}>
-              {saving ? "Saving..." : editing ? "Save changes" : "Save"}
-            </button>
-          )}
+          <button className="td-save" type="submit" disabled={saving}>
+            {saving ? "Saving..." : editing ? "Save changes" : "Save"}
+          </button>
         </div>
       </form>
 
-      {!viewing && unitModal && (
+      {unitModal && (
         <div className="td-overlay">
           <form className="td-modal" onSubmit={addUnit}>
             <div className="td-modal-head">
               <b>Add new Unit</b>
-
-              <button
-                type="button"
-                onClick={() => setUnitModal(false)}
-              >
+              <button type="button" onClick={() => setUnitModal(false)}>
                 ×
               </button>
             </div>

@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import LabTable from "./LabTable";
 import { panels } from "./mockData";
-import "./lab.css";
+import "./TestPanels.css";
 
 const getId = (item) => item?.id ?? item?._id ?? "";
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import LabTable from "./LabTable";
 import { reportApiService } from "../../api";
-import "./lab.css";
+import "./SearchReports.css";
 
 /**
  * The reports API answers { items: [...] }. Other endpoints answer { data: [...] }

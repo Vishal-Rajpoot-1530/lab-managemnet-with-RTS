@@ -1,7 +1,7 @@
 
 import { useMemo, useState } from "react";
 import { packages } from "./mockData";
-import "./lab.css";
+import "./TestPackages.css";
 
 const getId = (item) => item?.id ?? item?._id ?? "";
 

@@ -1,0 +1,187 @@
+
+.pkg-page {
+  --pkg-border: #e5eaf2;
+}
+
+.pkg-tabs {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 22px 0 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pkg-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 3px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pkg-tab.active {
+  border-bottom-color: #2563eb;
+  color: #2563eb;
+}
+
+.lab-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 7px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+}
+
+.pkg-tab.active .lab-count-pill {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.pkg-table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.pkg-table-heading h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.pkg-table-heading p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.pkg-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.pkg-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.pkg-table th {
+  padding: 15px 17px;
+  border-bottom: 1px solid #e5eaf2;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.pkg-table td {
+  padding: 17px;
+  border-bottom: 1px solid #edf1f6;
+  color: #475569;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.pkg-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.pkg-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.pkg-fee {
+  color: #0f766e;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.pkg-included {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 170px;
+  max-width: 300px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.pkg-included-count {
+  padding: 3px 7px;
+  border: 1px solid #dbeafe;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pkg-delete-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #fee2e2;
+  border-radius: 8px;
+  background: white;
+  color: #dc2626;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.pkg-delete-button:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.pkg-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .pkg-table {
+    min-width: 900px;
+  }
+}
+
+@media (max-width: 600px) {
+  .pkg-tabs {
+    gap: 14px;
+    overflow-x: auto;
+  }
+
+  .pkg-tab {
+    font-size: 12px;
+  }
+
+  .pkg-form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .pkg-table-heading {
+    padding: 16px;
+  }
+}

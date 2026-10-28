@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LabTable, { Action } from "./LabTable";
 import { interpretationApiService } from "../../api";
-import "./lab.css";
+import "./Interpretations.css";
 
 const EMPTY_FORM = { kind: "Test", linkId: "", name: "", text: "" };
 

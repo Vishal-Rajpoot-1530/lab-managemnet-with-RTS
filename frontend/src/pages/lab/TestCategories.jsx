@@ -4,8 +4,6 @@ import testCategoryApiService from "../../api/services/testCategoryApiService";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import IconButton from "../../components/common/IconButton";
-
-import "./lab.css";
 import "./test-categories.css";
 
 export default function TestCategories() {
