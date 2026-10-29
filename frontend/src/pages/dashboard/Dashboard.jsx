@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,7 +13,6 @@ import {
   ClipboardList,
   TrendingUp,
   Clock3,
-  AlertCircle,
   UserRoundPlus,
   RefreshCw,
   CircleCheck,
@@ -105,8 +105,6 @@ const kpis = [
   },
 ];
 
-// Sample patient records for the popup.
-// Replace with actual backend data when available.
 const todayPatients = [
   { id: "37431", name: "Demo Patient 01", age: 28, gender: "Male", tests: "CBC, LFT", status: "In Progress" },
   { id: "37432", name: "Demo Patient 02", age: 34, gender: "Female", tests: "Thyroid Profile", status: "Registered" },
@@ -133,6 +131,14 @@ const completedReports = [
   { id: "RPT-1010", patient: "Demo Patient 10", test: "Thyroid Profile", time: "12:10 PM", status: "Completed" },
 ];
 
+const pendingReports = [
+  { id: "RPT-2001", patient: "Demo Patient 11", test: "Complete Blood Count", time: "10:15 AM", status: "Pending Review" },
+  { id: "RPT-2002", patient: "Demo Patient 12", test: "Liver Function Test", time: "10:30 AM", status: "In Progress" },
+  { id: "RPT-2003", patient: "Demo Patient 13", test: "Thyroid Profile", time: "11:00 AM", status: "Pending Review" },
+  { id: "RPT-2004", patient: "Demo Patient 14", test: "Lipid Profile", time: "11:20 AM", status: "In Progress" },
+  { id: "RPT-2005", patient: "Demo Patient 15", test: "Blood Glucose", time: "11:45 AM", status: "Pending Review" },
+];
+
 function Panel({ title, subtitle, viewAll, children }) {
   return (
     <section className="dash-panel">
@@ -148,8 +154,7 @@ function Panel({ title, subtitle, viewAll, children }) {
             className="dash-view-all"
             onClick={viewAll}
           >
-            View all
-            <ChevronRight size={14} />
+            View all <ChevronRight size={14} />
           </button>
         )}
       </div>
@@ -159,7 +164,6 @@ function Panel({ title, subtitle, viewAll, children }) {
   );
 }
 
-// Updated KPI card: only the first two cards are clickable.
 function KpiCard({ label, value, meta, icon: Icon, tone, onClick }) {
   const clickable = Boolean(onClick);
 
@@ -192,29 +196,37 @@ function KpiCard({ label, value, meta, icon: Icon, tone, onClick }) {
         </small>
 
         {clickable && (
-          <span className="dash-kpi-hint">
-            Click to view list →
-          </span>
+          <span className="dash-kpi-hint">Click to view list →</span>
         )}
       </div>
     </article>
   );
 }
 
-// New searchable and scrollable popup.
-function RecordsModal({ type, onClose }) {
+function RecordsModal({ type, onClose, onViewPatient, onViewReport }) {
   const [search, setSearch] = useState("");
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const isPatients = type === "patients";
-  const records = isPatients ? todayPatients : completedReports;
+  const isPending = type === "pending";
+
+  const records = isPatients
+    ? todayPatients
+    : isPending
+      ? pendingReports
+      : completedReports;
 
   const title = isPatients
     ? "Today's patients"
-    : "Completed reports";
+    : isPending
+      ? "Pending reports"
+      : "Completed reports";
 
   const subtitle = isPatients
     ? "Patient registrations and test details"
-    : "Reports completed by the laboratory today";
+    : isPending
+      ? "Reports awaiting completion or verification"
+      : "Reports completed by the laboratory today";
 
   const filteredRecords = records.filter((record) =>
     Object.values(record)
@@ -225,12 +237,18 @@ function RecordsModal({ type, onClose }) {
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        if (selectedRecord) {
+          setSelectedRecord(null);
+        } else {
+          onClose();
+        }
+      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, selectedRecord]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -240,6 +258,16 @@ function RecordsModal({ type, onClose }) {
       document.body.style.overflow = previousOverflow;
     };
   }, []);
+
+  const openRecord = (record) => {
+    setSelectedRecord(record);
+
+    if (isPatients) {
+      onViewPatient(record);
+    } else {
+      onViewReport(record);
+    }
+  };
 
   return (
     <div
@@ -313,11 +341,16 @@ function RecordsModal({ type, onClose }) {
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record) => {
               const name = isPatients ? record.name : record.patient;
+
               const details = isPatients
                 ? `${record.id} · ${record.age} years · ${record.gender}`
                 : `${record.id} · ${record.time}`;
+
               const test = isPatients ? record.tests : record.test;
-              const statusClass = record.status.toLowerCase().replace(/\s+/g, "-");
+
+              const statusClass = record.status
+                .toLowerCase()
+                .replace(/\s+/g, "-");
 
               return (
                 <article className="dash-modal-record" key={record.id}>
@@ -336,9 +369,20 @@ function RecordsModal({ type, onClose }) {
                     <small>{test}</small>
                   </div>
 
-                  <span className={`dash-record-status ${statusClass}`}>
-                    {record.status}
-                  </span>
+                  <div className="dash-record-actions">
+                    <span className={`dash-record-status ${statusClass}`}>
+                      {record.status}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="dash-record-view"
+                      onClick={() => openRecord(record)}
+                    >
+                      {isPatients ? "View details" : "View report"}
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
                 </article>
               );
             })
@@ -370,6 +414,134 @@ function RecordsModal({ type, onClose }) {
           </button>
         </footer>
       </section>
+
+      {selectedRecord && (
+        <div
+          className="dash-detail-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedRecord(null);
+            }
+          }}
+        >
+          <section
+            className="dash-detail-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dash-detail-title"
+          >
+            <header className="dash-detail-header">
+              <div>
+                <span className="dash-detail-eyebrow">
+                  {isPatients ? "PATIENT INFORMATION" : "LABORATORY REPORT"}
+                </span>
+
+                <h2 id="dash-detail-title">
+                  {isPatients ? selectedRecord.name : selectedRecord.id}
+                </h2>
+
+                <p>
+                  {isPatients
+                    ? `Patient ID: ${selectedRecord.id}`
+                    : selectedRecord.patient}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="dash-modal-close"
+                onClick={() => setSelectedRecord(null)}
+                aria-label="Close details"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="dash-detail-body">
+              <div className="dash-detail-summary">
+                <span className="dash-detail-summary-icon">
+                  {isPatients ? <Users size={24} /> : <FileText size={24} />}
+                </span>
+
+                <div>
+                  <strong>
+                    {isPatients
+                      ? selectedRecord.name
+                      : selectedRecord.test}
+                  </strong>
+
+                  <p>
+                    {isPatients
+                      ? selectedRecord.tests
+                      : `Report ${selectedRecord.id}`}
+                  </p>
+                </div>
+
+                <span
+                  className={`dash-record-status ${selectedRecord.status
+                    .toLowerCase()
+                    .replace(/\s+/g, "-")}`}
+                >
+                  {selectedRecord.status}
+                </span>
+              </div>
+
+              <div className="dash-detail-grid">
+                {Object.entries(selectedRecord).map(([key, value]) => (
+                  <div className="dash-detail-field" key={key}>
+                    <span>
+                      {key === "id"
+                        ? isPatients
+                          ? "Patient ID"
+                          : "Report ID"
+                        : key === "patient"
+                          ? "Patient name"
+                          : key === "tests"
+                            ? "Requested tests"
+                            : key === "test"
+                              ? "Test name"
+                              : key === "time"
+                                ? "Report time"
+                                : key.charAt(0).toUpperCase() + key.slice(1)}
+                    </span>
+
+                    <strong>{String(value)}</strong>
+                  </div>
+                ))}
+              </div>
+
+              {!isPatients && (
+                <div className="dash-detail-notice">
+                  <Activity size={18} />
+                  <p>
+                    This is a report summary. Actual test results and
+                    verification information must be loaded from the
+                    laboratory report record.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <footer className="dash-detail-footer">
+              <button
+                type="button"
+                className="dash-detail-back"
+                onClick={() => setSelectedRecord(null)}
+              >
+                Back to list
+              </button>
+
+              <button
+                type="button"
+                className="dash-modal-done"
+                onClick={onClose}
+              >
+                Close
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
@@ -409,10 +581,19 @@ export default function Dashboard() {
     },
   ];
 
+  const handleViewPatient = (patient) => {
+    // The selected patient is displayed in the details popup.
+    // Connect this callback to the patient-details route/API when available.
+  };
+
+  const handleViewReport = (report) => {
+    // The selected report is displayed in the details popup.
+    // Connect this callback to the report-details route/API when available.
+  };
+
   return (
     <div className="dash-page">
       <div className="dash-shell">
-        {/* HEADER - unchanged */}
         <header className="dash-header">
           <div className="dash-header-copy">
             <div className="dash-eyebrow">
@@ -446,7 +627,6 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* KPI CARDS - only click handlers added */}
         <section className="dash-kpi-grid">
           {kpis.map((item) => (
             <KpiCard
@@ -461,13 +641,14 @@ export default function Dashboard() {
                   ? () => setActiveModal("patients")
                   : item.label === "Reports completed"
                     ? () => setActiveModal("reports")
-                    : undefined
+                    : item.label === "Pending reports"
+                      ? () => setActiveModal("pending")
+                      : undefined
               }
             />
           ))}
         </section>
 
-        {/* QUICK ACTIONS - unchanged */}
         <section className="dash-quick-grid">
           {quick.map((item) => {
             const Icon = item.icon;
@@ -494,11 +675,9 @@ export default function Dashboard() {
           })}
         </section>
 
-        {/* MAIN LAYOUT - unchanged */}
         <div className="dash-layout">
           <main className="dash-main">
             <div className="dash-two">
-              {/* PAYMENTS DUE */}
               <Panel
                 title="Payments due"
                 subtitle="Outstanding patient balances"
@@ -538,7 +717,6 @@ export default function Dashboard() {
                 </div>
               </Panel>
 
-              {/* RECENT TRANSACTIONS */}
               <Panel
                 title="Recent transactions"
                 subtitle="Payments received today"
@@ -577,7 +755,6 @@ export default function Dashboard() {
               </Panel>
             </div>
 
-            {/* ACTIVITIES */}
             <Panel
               title="Recent activities"
               subtitle="Latest operational updates"
@@ -612,7 +789,6 @@ export default function Dashboard() {
             </Panel>
           </main>
 
-          {/* SIDEBAR - unchanged */}
           <aside className="dash-side">
             <div className="dash-demo">
               <div className="dash-demo-top">
@@ -625,16 +801,15 @@ export default function Dashboard() {
 
               <h3>Product demo</h3>
               <p>
-                Your scheduled demo details and meeting
-                information can appear here.
+                Your scheduled demo details and meeting information can
+                appear here.
               </p>
 
               <button
                 type="button"
                 onClick={() => navigate("/getting-started")}
               >
-                View details
-                <ArrowRight size={14} />
+                View details <ArrowRight size={14} />
               </button>
             </div>
 
@@ -668,8 +843,7 @@ export default function Dashboard() {
                 type="button"
                 onClick={() => navigate("/business/referral")}
               >
-                Refer a lab
-                <ArrowRight size={15} />
+                Refer a lab <ArrowRight size={15} />
               </button>
             </div>
 
@@ -682,11 +856,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* NEW MODAL - rendered only when a clickable KPI is selected */}
       {activeModal && (
         <RecordsModal
           type={activeModal}
           onClose={() => setActiveModal(null)}
+          onViewPatient={handleViewPatient}
+          onViewReport={handleViewReport}
         />
       )}
     </div>
