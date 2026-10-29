@@ -377,12 +377,17 @@ html {
   color: var(--cobalt);
 }
 
-.lp-hero-description {
+.lab-landing .lp-hero .lp-hero-inner .lp-hero-description {
+  display: block;
+  width: min(56ch, 100%);
   margin: 26px auto 0;
-  max-width: 56ch;
+  font-family: var(--font-body);
   font-size: 1.2rem;
   line-height: 1.6;
   color: var(--muted);
+  text-align: center !important;
+  text-align-last: center;
+  box-sizing: border-box;
 }
 
 .lp-hero-actions {
