@@ -2300,3 +2300,45 @@
     padding: 7px 8px;
   }
 }
+
+
+
+
+.dash-modal-icon.amber {
+  color: #b45309;
+  background: #fff7e6;
+}
+
+.dash-modal-icon.purple {
+  color: #7c3aed;
+  background: #f3e8ff;
+}
+
+.dash-modal-amount {
+  display: block;
+  margin-top: 5px;
+  color: #059669;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dash-modal-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 22px;
+  border-top: 1px solid #e8edf4;
+  background: #f8fafc;
+}
+
+.dash-modal-total span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.dash-modal-total strong {
+  color: #059669;
+  font-size: 18px;
+  font-weight: 750;
+}

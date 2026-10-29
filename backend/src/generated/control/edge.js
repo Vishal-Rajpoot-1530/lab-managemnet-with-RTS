@@ -183,7 +183,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\RewanTech\\lab-managemnet-with-RTS\\backend\\src\\generated\\control",
+      "value": "C:\\Users\\Ashwinikashyap\\OneDrive\\Desktop\\LAB mangement\\lab-managemnet-with-RTS\\backend\\src\\generated\\control",
       "fromEnvVar": null
     },
     "config": {
@@ -197,7 +197,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\RewanTech\\lab-managemnet-with-RTS\\backend\\prisma\\control\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\Ashwinikashyap\\OneDrive\\Desktop\\LAB mangement\\lab-managemnet-with-RTS\\backend\\prisma\\control\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -211,6 +211,7 @@ const config = {
     "db"
   ],
   "activeProvider": "mysql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
