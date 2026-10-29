@@ -3,6 +3,7 @@ import { actorName } from "../middleware/auth.js";
 import * as activity from "../services/activityService.js";
 import * as business from "../services/businessService.js";
 import * as caseWise from "../services/casewiseReportService.js";
+import * as dashboard from "../services/dashboardService.js";
 import * as dataExport from "../services/dataExportService.js";
 import * as expenses from "../services/expenseService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -16,6 +17,7 @@ r.get("/daily", asyncHandler(async (req, res) => res.json(await business.daily(q
 r.get("/monthly", asyncHandler(async (req, res) => res.json(await business.monthly(query(req.query.month)))));
 r.get("/referral-reports", asyncHandler(async (req, res) =>
   res.json(await business.referralReports({ ...range(req.query), period: query(req.query.period) }))));
+r.get("/dashboard", asyncHandler(async (_req, res) => res.json(await dashboard.dashboard())));
 r.get("/dues", asyncHandler(async (req, res) => res.json(await business.dues(range(req.query)))));
 
 r.get("/activities", asyncHandler(async (req, res) => {

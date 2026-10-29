@@ -5,6 +5,8 @@ import { asList, cleanQuery, unwrap } from "../core/apiUnwrap";
 const E = API_CONFIG.ENDPOINTS.BUSINESS;
 
 export const businessApiService = {
+    dashboard: async () =>
+    unwrap(await apiClient.get(E.DASHBOARD)),
   daily: (query) => apiClient.get(E.DAILY, { query }),
   monthly: (query) => apiClient.get(E.MONTHLY, { query }),
   referralReports: (query) => apiClient.get(E.REFERRAL_REPORTS, { query }),
@@ -25,6 +27,10 @@ export const businessApiService = {
   exportRun: async ({ entity, from, to }) => unwrap(await apiClient.post(E.DATA_EXPORT, { entity, from, to })),
   /** -> { name, csv } */
   exportFile: async (id) => unwrap(await apiClient.get(E.DATA_EXPORT_FILE(id))),
+
+ 
+
+
 };
 
 export default businessApiService;
