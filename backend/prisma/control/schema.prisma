@@ -1,0 +1,81 @@
+// =====================================================================
+//  CONTROL schema: the ONLY tables in the main database (DATABASE_URL).
+//  It holds the super admin and the lab (admin) accounts created by the super
+//  admin. Patients, bills, tests, employees... live in each lab's own database
+//  (see prisma/schema.prisma).
+//
+//  Commands (always pass --schema):
+//      npx prisma migrate dev --schema prisma/control/schema.prisma --name <name>
+//      npx prisma migrate deploy --schema prisma/control/schema.prisma
+//      npx prisma generate --schema prisma/control/schema.prisma
+// =====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../src/generated/control"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// Platform owner (you). Signs in on the Super admin panel.
+model SuperAdmin {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(255)
+  email        String   @unique @db.VarChar(190)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("super_admins")
+}
+
+/// One lab = one admin account with its own database.
+model Tenant {
+  id               Int             @id @default(autoincrement())
+  labName          String          @map("lab_name") @db.VarChar(255)
+  adminName        String          @map("admin_name") @db.VarChar(255)
+  adminEmail       String          @unique @map("admin_email") @db.VarChar(190)
+  passwordHash     String          @map("password_hash") @db.VarChar(255)
+  /// The lab's database URL, encrypted (AES-256-GCM) with TENANT_SECRET.
+  dbUrlEncrypted   String?         @map("db_url_encrypted") @db.Text
+  /// host:port/database, safe to show in the panel.
+  dbHost           String?         @map("db_host") @db.VarChar(255)
+  /// Hash of host:port/database, so two labs can never share one database.
+  dbFingerprint    String?         @unique @map("db_fingerprint") @db.Char(64)
+  connectedAt      DateTime?       @map("connected_at")
+  lastLoginAt      DateTime?       @map("last_login_at")
+  failedLoginCount Int             @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?       @map("locked_until")
+  active           Boolean         @default(true)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  users            TenantUser[]
+  sessions         TenantSession[]
+
+  @@map("tenants")
+}
+
+/// Which lab an e-mail address belongs to, so employees sign in with just e-mail and password.
+model TenantUser {
+  email    String @id @db.VarChar(190)
+  tenantId Int    @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("tenant_users")
+}
+
+/// Which lab a signed-in token belongs to (the token itself is never stored, only its hash).
+model TenantSession {
+  tokenHash String   @id @map("token_hash") @db.Char(64)
+  tenantId  Int      @map("tenant_id")
+  expiresAt DateTime @map("expires_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([expiresAt])
+  @@map("tenant_sessions")
+}

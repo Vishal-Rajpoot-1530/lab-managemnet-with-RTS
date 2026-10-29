@@ -11,13 +11,18 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   isProd: process.env.NODE_ENV === "production",
   port: Number(process.env.PORT) || 4000,
+  /** The MAIN database: only the super admin and the lab accounts. */
   databaseUrl: process.env.DATABASE_URL ?? "",
   jwtSecret: process.env.JWT_SECRET ?? "",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
-  /** First owner account. Created once on startup if that e-mail has no user yet. */
-  adminEmail: (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase(),
-  adminPasswordHash: process.env.ADMIN_PASSWORD_HASH ?? "",
-  adminName: process.env.ADMIN_NAME ?? "Lab Owner",
+  /** Signs in to the Super admin panel. */
+  superAdminJwtSecret: process.env.SUPER_ADMIN_JWT_SECRET ?? "",
+  /** Encrypts each lab's saved database URL. */
+  tenantSecret: process.env.TENANT_SECRET ?? "",
+  /** First super admin. Created once on startup, only while no super admin exists yet. */
+  superAdminEmail: (process.env.SUPER_ADMIN_EMAIL ?? "").trim().toLowerCase(),
+  superAdminPassword: process.env.SUPER_ADMIN_PASSWORD ?? "",
+  superAdminName: process.env.SUPER_ADMIN_NAME ?? "Super Admin",
   /** Comma separated list. Empty = allow any origin (fine for local development). */
   corsOrigins: list(process.env.CORS_ORIGIN),
   /** Used to decide what "today" means and to group money by day. */
@@ -32,6 +37,12 @@ export function assertEnv(): void {
 
   if (env.jwtSecret.length < 32) {
     problems.push("JWT_SECRET must be set and at least 32 characters long.");
+  }
+  if (env.superAdminJwtSecret.length < 32) {
+    problems.push("SUPER_ADMIN_JWT_SECRET must be set and at least 32 characters long.");
+  }
+  if (env.tenantSecret.length < 32) {
+    problems.push("TENANT_SECRET must be set and at least 32 characters long.");
   }
 
   if (problems.length) {

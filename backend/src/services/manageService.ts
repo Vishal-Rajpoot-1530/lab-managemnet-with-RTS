@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { DoctorAccess, Employee } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
+import { registerLogin, unregisterLogin } from "../lib/tenantAccess.js";
 import { ApiError, badRequest, conflict, notFound } from "../utils/ApiError.js";
 import { iso } from "../utils/format.js";
 import { splitName } from "./patientService.js";
@@ -126,6 +127,8 @@ export async function createEmployee(input: unknown, actorUserId: number) {
     throw conflict("A login with this email already exists.", "DUPLICATE_EMAIL");
   }
 
+  await registerLogin(email); // ties the email to this lab (refuses one used by another lab)
+
   const split = splitName(name);
 
   const row = await prisma.$transaction(async (tx) => {
@@ -154,6 +157,9 @@ export async function createEmployee(input: unknown, actorUserId: number) {
     });
 
     return employee;
+  }).catch(async (err) => {
+    await unregisterLogin(email);
+    throw err;
   });
 
   return serializeEmployee(row, true);
@@ -178,7 +184,10 @@ export async function updateEmployee(employeeId: number, input: unknown, actorUs
   if (!isEmail(email)) throw badRequest("Enter a valid email address.");
   if (base.isOwner && !active) throw badRequest("The owner account cannot be deactivated.");
   if (isSelf && !active) throw badRequest("You cannot block your own account.");
-  if (email !== base.email) await assertEmailFree(email, employeeId);
+  if (email !== base.email) {
+    await assertEmailFree(email, employeeId);
+    await registerLogin(email);
+  }
   if (mobile !== base.mobile) await assertMobileFree(mobile, employeeId);
 
   // The owner keeps their role; nobody changes their own role.
@@ -227,6 +236,8 @@ export async function updateEmployee(employeeId: number, input: unknown, actorUs
 
     return updated;
   });
+
+  if (email !== base.email) await unregisterLogin(base.email);
 
   return (await withLogin([row]))[0]!;
 }
@@ -453,6 +464,8 @@ export async function createDoctorAccess(input: unknown, actorUserId: number) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  await registerLogin(email);
+
   const row = await prisma.$transaction(async (tx) => {
     const created = await tx.doctorAccess.create({
       data: {
@@ -471,6 +484,9 @@ export async function createDoctorAccess(input: unknown, actorUserId: number) {
     });
 
     return created;
+  }).catch(async (err) => {
+    await unregisterLogin(email);
+    throw err;
   });
 
   return serializeDoctorAccess(row);
@@ -541,4 +557,5 @@ export async function removeDoctorAccess(accessId: number, actorUserId: number) 
     prisma.doctorAccess.delete({ where: { id: accessId } }),
     prisma.user.deleteMany({ where: { email: doctor.email, role: "doctor" } }),
   ]);
+  await unregisterLogin(doctor.email);
 }

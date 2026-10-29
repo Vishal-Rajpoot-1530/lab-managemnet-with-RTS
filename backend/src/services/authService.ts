@@ -1,8 +1,8 @@
-
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { User } from "@prisma/client";
-import { prisma } from "../lib/prisma.js";
+import { controlPrisma, currentTenantId, prisma } from "../lib/prisma.js";
+import { findLoginTenant, recordTenantSession, registerLogin, runInTenant, unregisterLogin } from "../lib/tenantAccess.js";
 import { signToken } from "../middleware/auth.js";
 import { ApiError, badRequest, conflict } from "../utils/ApiError.js";
 import { isEmail, optText, reqText, text } from "../utils/validate.js";
@@ -52,8 +52,28 @@ async function provisionDoctorLogin(email: string, password: string) {
   });
 }
 
-/** identity = e-mail or mobile number. Employees and doctors use the same form. */
+/**
+ * identity = e-mail or mobile number. Employees and doctors use the same form.
+ * With several labs, an e-mail is matched to its lab first and the sign-in then runs
+ * inside that lab's database. Mobile numbers cannot be matched to a lab, so use the
+ * email. Lab admins use the Admin login page instead.
+ */
 export async function login(identity: string, password: string, ctx: LoginContext) {
+  const value = identity.trim();
+
+  // Already inside a lab (the Admin login does this): sign in there.
+  if (currentTenantId()) return loginInCurrentLab(identity, password, ctx);
+
+  const lab = value.includes("@") ? await findLoginTenant(value.toLowerCase()) : null;
+  if (lab?.isAdmin) throw new ApiError(403, "USE_ADMIN_LOGIN", "Lab admins sign in on the Admin login page.");
+  if (lab) return runInTenant(lab.tenantId, () => loginInCurrentLab(identity, password, ctx));
+
+  // The main database holds no lab users, so an unknown email gets the same answer and timing as a wrong password.
+  await bcrypt.compare(password, DUMMY_HASH);
+  throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid email or password.");
+}
+
+async function loginInCurrentLab(identity: string, password: string, ctx: LoginContext) {
   const value = identity.trim();
   const byEmail = value.includes("@");
   const normalized = byEmail ? value.toLowerCase() : value.replace(/\D/g, "");
@@ -125,6 +145,9 @@ export async function login(identity: string, password: string, ctx: LoginContex
     }),
   ]);
 
+  // Remember which lab this token belongs to.
+  await recordTenantSession(token, expiresAt);
+
   // Shown in Manage > Doctor access.
   if (user.role === "doctor") {
     await prisma.doctorAccess.updateMany({
@@ -177,6 +200,11 @@ export async function updateProfile(
 
   if (!isEmail(email)) throw badRequest("Enter a valid email address.");
 
+  const emailChanged = email !== user.email;
+  if (emailChanged && user.role === "owner" && currentTenantId()) {
+    throw badRequest("The admin email can only be changed by the platform administrator.");
+  }
+
   const taken = await prisma.user.findFirst({
     where: {
       id: { not: userId },
@@ -186,6 +214,7 @@ export async function updateProfile(
   });
 
   if (taken) throw conflict("That email or phone number is already used by another account.");
+  if (emailChanged) await registerLogin(email); // also refuses an email used by another lab
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: userId }, data: { name, email, mobile } });
@@ -206,6 +235,8 @@ export async function updateProfile(
       });
     }
   });
+
+  if (emailChanged) await unregisterLogin(user.email);
 
   return getProfile(userId);
 }
@@ -244,6 +275,12 @@ export async function changePassword(
       data: { revokedAt: new Date() },
     }),
   ]);
+
+  // The admin's password lives on the lab account too; keep it in step.
+  const tenantId = currentTenantId();
+  if (tenantId && user.role === "owner") {
+    await controlPrisma.tenant.update({ where: { id: tenantId }, data: { passwordHash } });
+  }
 }
 
 export async function listSessions(userId: number, currentSessionId: string) {

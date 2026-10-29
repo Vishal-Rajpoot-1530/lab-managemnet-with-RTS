@@ -33,6 +33,9 @@ export const API_CONFIG=Object.freeze({
   OUTSOURCE:Object.freeze({BASE:"/cases/outsource",BY_ID:id=>`/cases/outsource/${id}`,LABS:"/cases/outsource-labs"}),
   RADIOLOGY_CASES:Object.freeze({BASE:"/cases/radiology"}),
 
+  // ---- Super admin panel
+  SUPER_ADMIN:Object.freeze({LOGIN:"/super-admin/login",ME:"/super-admin/me",TENANTS:"/super-admin/tenants",TENANT_BY_ID:id=>`/super-admin/tenants/${id}`}),
+
   // ---- Business > Expenses
   EXPENSES:Object.freeze({
    BASE:"/business/expenses",
