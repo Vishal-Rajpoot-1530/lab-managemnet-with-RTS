@@ -1,9 +1,13 @@
 // =====================================================================
 //  LabLIMS - Prisma schema (MySQL)
 //
-//  This file is the single source of truth for the database.
-//  Do not edit tables by hand; change this file and run:
-//      npm run db:migrate
+//  LAB schema: the tables every lab has in ITS OWN database (patients, bills,
+//  tests, employees, ...). It is created automatically in a lab's database when
+//  the lab admin connects it. The main database (DATABASE_URL) does NOT get these
+//  tables; it uses prisma/control/schema.prisma instead.
+//
+//  Do not edit tables by hand; change this file and run (against a development lab database):
+//      npx prisma migrate dev
 //
 //  New machine / after pulling:  see prisma/README.md
 // =====================================================================
@@ -14,7 +18,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
+  url      = env("LAB_DATABASE_URL")
 }
 
 // ---------------------------------------------------------------------
@@ -405,23 +409,21 @@ model TestReferenceRange {
   @@map("test_reference_ranges")
 }
 
+/// Interpretation text for a test or for a panel (panelId).
 model Interpretation {
-  id        Int      @id @default(autoincrement())
-  testId    Int?     @map("test_id")
-  name      String   @db.VarChar(255)
-  content   String   @db.MediumText
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  test      Test?    @relation(fields: [testId], references: [id], onDelete: SetNull)
-
-
-  panelId   Int?     @map("panel_id")
+  id        Int        @id @default(autoincrement())
+  testId    Int?       @map("test_id")
+  panelId   Int?       @map("panel_id")
+  name      String     @db.VarChar(255)
+  content   String     @db.MediumText
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  test      Test?      @relation(fields: [testId], references: [id], onDelete: SetNull)
   panel     TestPanel? @relation(fields: [panelId], references: [id], onDelete: SetNull)
 
-  @@index([panelId])   // add next to your existing @@index([testId])
-
   @@index([testId])
+  @@index([panelId])
   @@map("interpretations")
 }
 
@@ -451,16 +453,15 @@ model TestPackageItem {
 }
 
 model TestPanel {
-  id          Int             @id @default(autoincrement())
-  code        String?         @db.VarChar(40)
-  name        String          @unique @db.VarChar(255)
-  price       Decimal         @default(0) @db.Decimal(12, 2)
-  description String?         @db.Text
-  active      Boolean         @default(true)
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
-  items       TestPanelItem[]
-
+  id              Int              @id @default(autoincrement())
+  code            String?          @db.VarChar(40)
+  name            String           @unique @db.VarChar(255)
+  price           Decimal          @default(0) @db.Decimal(12, 2)
+  description     String?          @db.Text
+  active          Boolean          @default(true)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  items           TestPanelItem[]
   interpretations Interpretation[]
 
   @@map("test_panels")
@@ -636,16 +637,16 @@ model ReportTest {
 // =====================================================================
 
 model RadiologyTemplate {
-  id        Int               @id @default(autoincrement())
-  modality  String            @db.VarChar(30)
-  name      String            @db.VarChar(255)
-  category  String            @default("General") @db.VarChar(80)
-  description String?         @db.VarChar(500)
-  body      String            @db.MediumText
-  active    Boolean           @default(true)
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
-  reports   RadiologyReport[]
+  id          Int               @id @default(autoincrement())
+  modality    String            @db.VarChar(30)
+  name        String            @db.VarChar(255)
+  category    String            @default("General") @db.VarChar(80)
+  description String?           @db.VarChar(500)
+  body        String            @db.MediumText
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  reports     RadiologyReport[]
 
   @@index([modality])
   @@map("radiology_templates")

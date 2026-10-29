@@ -18,3 +18,4 @@ export{default as manageApiService}from"./services/manageApiService";
 export{default as interpretationApiService}from"./services/interpretationApiService";
 export{default as casesApiService}from"./services/caseApiService";
 export{default as expenseApiService}from"./services/expenseApiService";
+export{default as superAdminApiService}from"./services/superAdminApiService";

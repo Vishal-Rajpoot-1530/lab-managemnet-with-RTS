@@ -91,6 +91,24 @@ export const authApi = {
     return data;
   },
 
+  /** Lab admin sign-in: e-mail, password and the lab's database URL. Stores the token. */
+  async adminLogin(email, password, databaseUrl) {
+    const data = await request("/admin-auth/login", {
+      method: "POST",
+      body: {
+        email: String(email).trim(),
+        password,
+        databaseUrl: String(databaseUrl || "").trim(),
+      },
+    });
+
+    if (!data?.token) throw new Error("The server did not return a token.");
+
+    storeToken(data.token);
+
+    return data;
+  },
+
   /** Returns { user } if the stored token is still valid, otherwise throws. */
   me() {
     return request("/auth/me");

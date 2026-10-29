@@ -97,6 +97,8 @@ import EmailPreferences from "../pages/manage/EmailPreferences.jsx";
 import RequireAuth from "../components/common/RequireAuth.jsx";
 
 import LabReport from "../pages/lab/LabReport.jsx";
+import SuperAdminPanel from "../pages/access/SuperAdminPanel.jsx";
+import AdminLogin from "../pages/access/AdminLogin.jsx";
 
 export default function AppRoutes() {
   return (
@@ -116,6 +118,9 @@ export default function AppRoutes() {
       <Route path="/sms-otp" element={<SmsOtp />} />
 
       <Route path="/account-locked" element={<AccountLocked />} />
+
+      <Route path="/super-admin" element={<SuperAdminPanel/>}/>
+      <Route path="/admin-login" element={<AdminLogin/>}/>
 
       {/* =========================
           MAIN APPLICATION
