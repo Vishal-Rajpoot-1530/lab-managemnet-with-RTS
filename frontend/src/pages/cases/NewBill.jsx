@@ -1175,9 +1175,9 @@ export default function NewBill() {
 
               <Pay label="Discount" value={discount} set={setDiscount} />
 
-              <Pay label="Amount received" value={received} set={setReceived} />
+              <Pay label="Amount Paid" value={received} set={setReceived} />
 
-              <Pay label="Balance: Rs." value={balance} plain red />
+              <Pay label="Due: Rs." value={balance} plain red />
 
               <div className="nb-pay">
                 <label>Mode:</label>
@@ -1504,7 +1504,7 @@ function Investigation({
           </div>
 
           {/* PAID */}
-          <div className="nb-invest-payment-field">
+          {/* <div className="nb-invest-payment-field">
             <label htmlFor={`paid-${modality}`}>* Paid</label>
             <input
               id={`paid-${modality}`}
@@ -1513,10 +1513,10 @@ function Investigation({
               value={payment?.paid ?? ""}
               onChange={(event) => onPaymentChange("paid", event.target.value)}
             />
-          </div>
+          </div> */}
 
           {/* DISCOUNT */}
-          <div className="nb-invest-payment-field">
+          {/* <div className="nb-invest-payment-field">
             <label htmlFor={`discount-${modality}`}>* Discount</label>
             <input
               id={`discount-${modality}`}
@@ -1527,7 +1527,7 @@ function Investigation({
                 onPaymentChange("discount", event.target.value)
               }
             />
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
