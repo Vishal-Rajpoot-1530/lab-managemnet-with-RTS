@@ -51,9 +51,9 @@ const formatTime = (value) => {
 
   return date && !Number.isNaN(date.getTime())
     ? date.toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "";
 };
 
@@ -334,16 +334,8 @@ function RecordsModal({
     );
   };
 
-  const getRecordId = (record) => {
-    return (
-      record.reportId ||
-      record.billId ||
-      record.regNo ||
-      record.registrationNo ||
-      record.id ||
-      "—"
-    );
-  };
+  const getRecordId = (record) =>
+    record.regNo || record.registrationNo || record.id || record.reportId || record.billId || "—";
 
   const getRecordTest = (record) => {
     return (
@@ -386,10 +378,10 @@ function RecordsModal({
   const getRecordAmount = (record) => {
     return Number(
       record.amount ??
-        record.paidAmount ??
-        record.collectedAmount ??
-        record.paymentAmount ??
-        0
+      record.paidAmount ??
+      record.collectedAmount ??
+      record.paymentAmount ??
+      0
     );
   };
 
@@ -488,14 +480,17 @@ function RecordsModal({
 
               const details = isPatients
                 ? [
-                    record.id,
-                    record.age
-                      ? `${record.age} years`
-                      : null,
-                    record.gender,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
+                  record.id,
+                  // record.age
+                  //   ? `${record.age} years`
+                  //   : null,
+
+
+                     record.age ? (/[a-z]/i.test(String(record.age)) ? record.age : `${record.age} years`) : null,
+                  record.gender,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
                 : `ID: ${recordId}`;
 
               const avatar = String(name)
@@ -526,16 +521,9 @@ function RecordsModal({
                     <small>
                       {isPatients
                         ? test
-                        : isCollection
-                          ? `${test} · ${
-                              formatTime(recordTime) ||
-                              "Time unavailable"
-                            }`
-                          : `${test} · ${
-                              recordTime
-                                ? formatDay(recordTime)
-                                : "Date unavailable"
-                            }`}
+                        : isCollection || isCompleted
+                          ? `${test} · ${formatTime(recordTime) || "Time unavailable"}`
+                          : `${test} · ${recordTime ? formatDay(recordTime) : "Date unavailable"}`}
                     </small>
 
                     {/* Payment details */}
@@ -633,6 +621,11 @@ export default function Dashboard() {
 
     try {
       const response = await businessApiService.dashboard();
+
+
+      console.log("Dashboard API response:", response);
+      console.log("Completed reports:", response?.completedReports);
+      console.log("Pending reports:", response?.pendingReports);
 
       setData(response);
       setError("");
@@ -864,8 +857,8 @@ export default function Dashboard() {
                 subtitle={
                   data?.duesSummary?.count
                     ? `${data.duesSummary.count} bills · ${rupees(
-                        data.duesSummary.amount
-                      )} outstanding`
+                      data.duesSummary.amount
+                    )} outstanding`
                     : "Outstanding patient balances"
                 }
                 viewAll={() =>
@@ -1112,7 +1105,8 @@ export default function Dashboard() {
           patients={data.todayPatients ?? []}
           reports={data.completedReports ?? []}
           pendingReports={data.pendingReports ?? []}
-          transactions={data.transactions ?? []}
+          // transactions={data.transactions ?? []}
+             transactions={data.collections ?? data.transactions ?? []}
           onClose={() => setActiveModal(null)}
         />
       )}
