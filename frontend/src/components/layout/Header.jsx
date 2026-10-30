@@ -16,7 +16,7 @@ import SetupDropdown from "../header/SetupDropdown";
 import logo from "../../assets/logo2.png";
 
 import "./header.css";
-import NotificationBell from "../../pages/access/NotificationBell";
+import NotificationBell from "../header/NotificationBell";
 
 export default function Header() {
   const [o, setO] = useState(null);
@@ -135,7 +135,7 @@ export default function Header() {
         </div>
 
         {/* NOTIFICATIONS - BACKEND CONNECTED */}
-        <div className="notification-wrapper">
+        <div className="notification-wrapper hdr-icon">
           <div className="notification-button-wrap">
             <NotificationBell />
           </div>
