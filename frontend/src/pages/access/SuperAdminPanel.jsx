@@ -14,6 +14,13 @@ const formatDate = (value) =>
   value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Never";
 
 const EMPTY_FORM = { adminName: "", labName: "", email: "", password: "" };
+const EMPTY_NOTE = { title: "", message: "", severity: "info", allLabs: true, tenantIds: [], expiresAt: "" };
+const SEVERITIES = [
+  { value: "info", label: "Information", badge: "ok" },
+  { value: "success", label: "Success", badge: "ok" },
+  { value: "warning", label: "Warning", badge: "warn" },
+  { value: "critical", label: "Important", badge: "off" },
+];
 
 /* ------------------------------------------------------------------ */
 /*  Sign in                                                            */
@@ -87,6 +94,12 @@ export default function SuperAdminPanel() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");
 
+  // notifications typed by the super admin
+  const [notes, setNotes] = useState([]);
+  const [noteForm, setNoteForm] = useState(EMPTY_NOTE);
+  const [noteError, setNoteError] = useState("");
+  const [noteBusy, setNoteBusy] = useState(false);
+
   const signOut = useCallback(() => {
     superAdminApiService.logout();
     setAdmin(null);
@@ -123,15 +136,73 @@ export default function SuperAdminPanel() {
       .finally(() => setChecking(false));
   }, []);
 
+  const loadNotes = useCallback(async () => {
+    try {
+      setNotes(await superAdminApiService.notifications.list());
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError]);
+
   useEffect(() => {
-    if (admin) load();
-  }, [admin, load]);
+    if (admin) {
+      load();
+      loadNotes();
+    }
+  }, [admin, load, loadNotes]);
 
   useEffect(() => {
     if (!toast) return undefined;
     const timer = setTimeout(() => setToast(""), 4000);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  async function sendNotification(event) {
+    event.preventDefault();
+    setNoteError("");
+
+    if (!noteForm.title.trim() || !noteForm.message.trim()) return setNoteError("Please type a title and a message.");
+    if (!noteForm.allLabs && noteForm.tenantIds.length === 0) return setNoteError("Choose at least one lab.");
+
+    setNoteBusy(true);
+    try {
+      const created = await superAdminApiService.notifications.create({
+        title: noteForm.title.trim(),
+        message: noteForm.message.trim(),
+        severity: noteForm.severity,
+        allLabs: noteForm.allLabs,
+        tenantIds: noteForm.tenantIds,
+        expiresAt: noteForm.expiresAt,
+      });
+      setNotes((current) => [created, ...current]);
+      setNoteForm(EMPTY_NOTE);
+      setToast("Notification sent.");
+    } catch (err) {
+      handleError(err, setNoteError);
+    } finally {
+      setNoteBusy(false);
+    }
+  }
+
+  async function toggleNote(note) {
+    try {
+      const updated = await superAdminApiService.notifications.update(note.id, { active: !note.active });
+      setNotes((current) => current.map((n) => (n.id === updated.id ? updated : n)));
+      setToast(updated.active ? "Notification is visible again." : "Notification hidden from the labs.");
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  async function deleteNote(note) {
+    try {
+      await superAdminApiService.notifications.remove(note.id);
+      setNotes((current) => current.filter((n) => n.id !== note.id));
+      setToast("Notification deleted.");
+    } catch (err) {
+      handleError(err);
+    }
+  }
 
   async function createLab(event) {
     event.preventDefault();
@@ -354,6 +425,122 @@ export default function SuperAdminPanel() {
                 ))}
                 {!labs.length && !loading && (
                   <tr><td colSpan={6} style={{ textAlign: "center", color: "#6b7280" }}>No lab accounts yet. Create the first one above.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="aa-card">
+          <h2 className="aa-title" style={{ fontSize: 18 }}>Notifications</h2>
+          <p className="aa-sub">
+            Type a message and it appears in the notification bar of the labs you choose.
+          </p>
+
+          <form className="aa-form" onSubmit={sendNotification}>
+            <div className="aa-grid">
+              <label className="aa-field">
+                Title
+                <input className="aa-input" value={noteForm.title} maxLength={160}
+                  onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })} required />
+              </label>
+              <label className="aa-field">
+                Type
+                <select className="aa-input" value={noteForm.severity}
+                  onChange={(e) => setNoteForm({ ...noteForm, severity: e.target.value })}>
+                  {SEVERITIES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </label>
+            </div>
+
+            <label className="aa-field">
+              Message
+              <textarea className="aa-input" rows={4} value={noteForm.message} maxLength={2000}
+                onChange={(e) => setNoteForm({ ...noteForm, message: e.target.value })} required />
+            </label>
+
+            <div className="aa-field">
+              Send to
+              <span className="aa-row" style={{ gap: 18 }}>
+                <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }}>
+                  <input type="radio" name="audience" checked={noteForm.allLabs}
+                    onChange={() => setNoteForm({ ...noteForm, allLabs: true })} />
+                  All labs
+                </label>
+                <label style={{ display: "flex", gap: 6, alignItems: "center", fontWeight: 400 }}>
+                  <input type="radio" name="audience" checked={!noteForm.allLabs}
+                    onChange={() => setNoteForm({ ...noteForm, allLabs: false })} />
+                  Selected labs
+                </label>
+              </span>
+
+              {!noteForm.allLabs && (
+                <span style={{ display: "grid", gap: 6, marginTop: 6, maxHeight: 180, overflow: "auto" }}>
+                  {labs.map((lab) => (
+                    <label key={lab.id} style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 400 }}>
+                      <input type="checkbox" checked={noteForm.tenantIds.includes(lab.id)}
+                        onChange={(e) => setNoteForm({
+                          ...noteForm,
+                          tenantIds: e.target.checked
+                            ? [...noteForm.tenantIds, lab.id]
+                            : noteForm.tenantIds.filter((id) => id !== lab.id),
+                        })} />
+                      {lab.labName} <small>({lab.adminEmail})</small>
+                    </label>
+                  ))}
+                  {!labs.length && <small>No lab accounts yet.</small>}
+                </span>
+              )}
+            </div>
+
+            <label className="aa-field">
+              Hide automatically after (optional)
+              <input className="aa-input" type="date" value={noteForm.expiresAt} style={{ maxWidth: 220 }}
+                onChange={(e) => setNoteForm({ ...noteForm, expiresAt: e.target.value })} />
+            </label>
+
+            {noteError && <p className="aa-error" role="alert">{noteError}</p>}
+
+            <div>
+              <button type="submit" className="aa-btn primary" disabled={noteBusy}>
+                {noteBusy ? "Sending…" : "Send notification"}
+              </button>
+            </div>
+          </form>
+
+          <div className="aa-table-wrap" style={{ marginTop: 24 }}>
+            <table className="aa-table">
+              <thead>
+                <tr><th>NOTIFICATION</th><th>SENT TO</th><th>STATUS</th><th>DATE</th><th>ACTIONS</th></tr>
+              </thead>
+              <tbody>
+                {notes.map((note) => {
+                  const severity = SEVERITIES.find((s) => s.value === note.severity) ?? SEVERITIES[0];
+                  return (
+                    <tr key={note.id}>
+                      <td style={{ maxWidth: 420 }}>
+                        <strong>{note.title}</strong> <span className={`aa-badge ${severity.badge}`}>{severity.label}</span>
+                        <small style={{ whiteSpace: "pre-wrap" }}>{note.message}</small>
+                      </td>
+                      <td>{note.allLabs ? "All labs" : `${note.tenantIds.length} lab${note.tenantIds.length === 1 ? "" : "s"}`}</td>
+                      <td>
+                        <span className={`aa-badge ${note.active ? "ok" : "off"}`}>{note.active ? "Visible" : "Hidden"}</span>
+                        {note.expiresAt && <small>Until {formatDate(note.expiresAt)}</small>}
+                      </td>
+                      <td>{formatDate(note.createdAt)}</td>
+                      <td>
+                        <div className="aa-actions">
+                          <button type="button" className="aa-btn small" onClick={() => toggleNote(note)}>
+                            {note.active ? "Hide" : "Show"}
+                          </button>
+                          <button type="button" className="aa-btn small danger" onClick={() => deleteNote(note)}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!notes.length && (
+                  <tr><td colSpan={5} style={{ textAlign: "center", color: "#6b7280" }}>No notifications yet.</td></tr>
                 )}
               </tbody>
             </table>

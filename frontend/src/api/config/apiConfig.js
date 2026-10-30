@@ -10,7 +10,7 @@ export const API_CONFIG=Object.freeze({
   PATIENTS:Object.freeze({BASE:"/patients",BY_ID:id=>`/patients/${id}`,SEARCH:"/patients/search"}),
   REFERRERS:Object.freeze({BASE:"/doctors",BY_ID:id=>`/doctors/${id}`}),
   AGENTS:Object.freeze({BASE:"/cases/agents",BY_ID:id=>`/cases/agents/${id}`}),
-  BUSINESS:Object.freeze({BASE:"/business",DAILY:"/business/daily",MONTHLY:"/business/monthly",REFERRAL_REPORTS:"/business/referral-reports",CASE_WISE_REPORT:"/business/case-wise-report",CASE_WISE_OPTIONS:"/business/case-wise-report/options",DATA_EXPORT:"/business/data-export",DATA_EXPORT_FILE:id=>`/business/data-export/${id}/file`}),
+  BUSINESS:Object.freeze({BASE:"/business",DAILY:"/business/daily",MONTHLY:"/business/monthly",REFERRAL_REPORTS:"/business/referral-reports",CASE_WISE_REPORT:"/business/case-wise-report",CASE_WISE_OPTIONS:"/business/case-wise-report/options",DASHBOARD:"/business/dashboard",DATA_EXPORT:"/business/data-export",DATA_EXPORT_FILE:id=>`/business/data-export/${id}/file`}),
   REPORTS:Object.freeze({BASE:"/reports",TODAY:"/reports/today",SEARCH:"/reports/search",BY_ID:id=>`/reports/${id}`}),
   LAB:Object.freeze({BASE:"/lab",TODAY:"/lab/today",TESTS:"/lab/tests"}),
   TESTS:Object.freeze({BASE:"/lab/tests",BY_ID:id=>`/lab/tests/${id}`}),
@@ -34,7 +34,8 @@ export const API_CONFIG=Object.freeze({
   RADIOLOGY_CASES:Object.freeze({BASE:"/cases/radiology"}),
 
   // ---- Super admin panel
-  SUPER_ADMIN:Object.freeze({LOGIN:"/super-admin/login",ME:"/super-admin/me",TENANTS:"/super-admin/tenants",TENANT_BY_ID:id=>`/super-admin/tenants/${id}`}),
+  SUPER_ADMIN:Object.freeze({LOGIN:"/super-admin/login",ME:"/super-admin/me",TENANTS:"/super-admin/tenants",TENANT_BY_ID:id=>`/super-admin/tenants/${id}`,NOTIFICATIONS:"/super-admin/notifications",NOTIFICATION_BY_ID:id=>`/super-admin/notifications/${id}`}),
+  NOTIFICATIONS:Object.freeze({BASE:"/notifications"}),
 
   // ---- Business > Expenses
   EXPENSES:Object.freeze({
@@ -43,20 +44,6 @@ export const API_CONFIG=Object.freeze({
    CATEGORIES:"/business/expense-categories",
    CATEGORY_BY_ID:id=>`/business/expense-categories/${id}`,
   }),
-
-  BUSINESS: Object.freeze({
-  BASE: "/business",
-  DASHBOARD: "/business/dashboard",
-  DAILY: "/business/daily",
-  MONTHLY: "/business/monthly",
-  REFERRAL_REPORTS: "/business/referral-reports",
-  CASE_WISE_REPORT: "/business/case-wise-report",
-  CASE_WISE_OPTIONS: "/business/case-wise-report/options",
-  DATA_EXPORT: "/business/data-export",
-  DATA_EXPORT_FILE: (id) => `/business/data-export/${id}/file`,
-}),
-
-
  })
 });
 export default API_CONFIG;

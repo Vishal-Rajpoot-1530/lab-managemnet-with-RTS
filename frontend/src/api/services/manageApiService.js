@@ -29,6 +29,11 @@ export default {
     invite: async (invitee) => unwrap(await apiClient.post(E.REFERRALS.BASE, { invitee }), "referral", "program"),
   },
 
+  /** Messages from the super admin, for the notification bar. */
+  notifications: {
+    list: async () => asList(await apiClient.get(E.NOTIFICATIONS.BASE), "notifications"),
+  },
+
   doctorAccess: {
     list: async () => asList(await apiClient.get(E.DOCTOR_ACCESS.BASE), "doctorAccess", "doctors"),
     create: async (payload) => unwrap(await apiClient.post(E.DOCTOR_ACCESS.BASE, payload), "doctorAccess", "doctor"),

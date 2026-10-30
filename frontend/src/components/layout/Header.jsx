@@ -1,15 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   Search,
   Headphones,
   Settings,
-  Play,
-  HelpCircle,
-  Bell,
   UserRound,
   ChevronDown,
-  ThumbsUp,
-  Megaphone,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -21,88 +16,7 @@ import SetupDropdown from "../header/SetupDropdown";
 import logo from "../../assets/logo2.png";
 
 import "./header.css";
-
-const notifications = [
-  {
-    date: "01 October, 2026",
-    message:
-      "On account of Gandhi Jayanti, customer support team will not be available tomorrow (2nd Oct'26).",
-    likes: 11,
-  },
-  {
-    date: "23 September, 2026",
-    message:
-      "We are always here to help! But we are also busy on call with customers. Please raise a support ticket and we will call you back.",
-    likes: 5,
-  },
-  {
-    date: "09 September, 2026",
-    message:
-      "Manage entire panels from a single page. Try now Lab > Test Panels",
-    likes: 0,
-  },
-];
-
-function NotificationPanel() {
-  return (
-    <div
-      className="notification-panel"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <div className="notification-header">
-        <strong>Notification</strong>
-      </div>
-
-      <div className="notification-list">
-        {notifications.map((notification, index) => (
-          <div className="notification-item" key={index}>
-            <div className="notification-meta">
-              <span className="notification-badge">
-                Announcement
-              </span>
-
-              <span className="notification-date">
-                {notification.date}
-              </span>
-            </div>
-
-            <div className="notification-message">
-              {notification.message}
-            </div>
-
-            <div className="notification-feedback">
-              <button type="button" className="notification-like">
-                <ThumbsUp size={14} />
-                <span>{notification.likes}</span>
-              </button>
-
-              <button type="button" className="notification-feedback-button">
-                <Megaphone size={14} />
-                Feedback?
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="notification-footer">
-        <div className="notification-footer-text">
-          <strong>Follow us</strong>
-          <strong>on</strong>
-          <strong>Instagram</strong>
-        </div>
-
-        <div className="notification-instagram">
-          <div className="notification-qr">
-            <span>◎</span>
-          </div>
-
-          <small>@LABSMARTLIS</small>
-        </div>
-      </div>
-    </div>
-  );
-}
+import NotificationBell from "../../pages/access/NotificationBell";
 
 export default function Header() {
   const [o, setO] = useState(null);
@@ -110,32 +24,9 @@ export default function Header() {
 
   const nav = useNavigate();
 
-  const notificationRef = useRef(null);
-
   const t = (x) => {
     setO((current) => (current === x ? null : x));
   };
-
-  /*
-   * Close notification when clicking anywhere outside it.
-   */
-  useEffect(() => {
-    function handleOutsideClick(event) {
-      if (
-        o === "notifications" &&
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
-        setO(null);
-      }
-    }
-
-    document.addEventListener("mousedown", handleOutsideClick);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [o]);
 
   return (
     <header className="app-header">
@@ -144,6 +35,7 @@ export default function Header() {
           3D LAB BACKGROUND
           Decorative only - does not affect functionality
           ===================================================== */}
+
       <div className="header-3d-bg" aria-hidden="true">
 
         {/* Floating glass/orb elements */}
@@ -176,9 +68,10 @@ export default function Header() {
       {/* BRAND */}
       <div className="brand">
         <img src={logo} alt="LabLIMS Logo" />
+
         <span className="lp-brand-text">
-           LAB<span>LIMS</span>
-          </span>
+          LAB<span>LIMS</span>
+        </span>
       </div>
 
       {/* SEARCH */}
@@ -193,7 +86,7 @@ export default function Header() {
             q.trim() &&
             nav(
               "/cases/bills?search=" +
-                encodeURIComponent(q),
+                encodeURIComponent(q)
             )
           }
           placeholder="Search any bills, reports"
@@ -202,6 +95,7 @@ export default function Header() {
 
       {/* ACTIONS */}
       <div className="actions">
+
         {/* HELP */}
         <div className="rel">
           <button
@@ -240,26 +134,11 @@ export default function Header() {
           </Dropdown>
         </div>
 
-        
-
-        {/* NOTIFICATIONS */}
-        <div
-          className="notification-wrapper"
-          ref={notificationRef}
-        >
+        {/* NOTIFICATIONS - BACKEND CONNECTED */}
+        <div className="notification-wrapper">
           <div className="notification-button-wrap">
-            <IconButton
-              label="Notifications"
-              onClick={() => t("notifications")}
-            >
-              <Bell />
-            </IconButton>
-
-            {/* Notification count */}
-            <span className="notification-dot" />
+            <NotificationBell />
           </div>
-
-          {o === "notifications" && <NotificationPanel />}
         </div>
 
         {/* PROFILE */}
@@ -281,6 +160,7 @@ export default function Header() {
             />
           </Dropdown>
         </div>
+
       </div>
     </header>
   );

@@ -75,4 +75,12 @@ export default {
     update: (id, payload) => request(E.TENANT_BY_ID(id), { method: "PATCH", body: payload }),
     remove: (id) => request(E.TENANT_BY_ID(id), { method: "DELETE" }),
   },
+
+  /** Messages shown in the labs' notification bar. */
+  notifications: {
+    list: async () => (await request(E.NOTIFICATIONS)).items ?? [],
+    create: (payload) => request(E.NOTIFICATIONS, { method: "POST", body: payload }),
+    update: (id, payload) => request(E.NOTIFICATION_BY_ID(id), { method: "PATCH", body: payload }),
+    remove: (id) => request(E.NOTIFICATION_BY_ID(id), { method: "DELETE" }),
+  },
 };

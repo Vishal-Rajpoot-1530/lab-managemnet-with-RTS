@@ -5,7 +5,7 @@ import { errorHandler, routeNotFound } from "./middleware/errorHandler.js";
 import { requestContext } from "./middleware/requestContext.js";
 import { tenantContext } from "./middleware/tenantContext.js";
 import api from "./routes/index.js";
-import { adminAuthRouter, superAdminRouter } from "./routes/tenantRoutes.js";
+import { adminAuthRouter, notificationsRouter, superAdminRouter } from "./routes/tenantRoutes.js";
 
 /** Builds the Express app (kept separate from server.ts so it can be tested). */
 export function createApp() {
@@ -23,6 +23,7 @@ export function createApp() {
   // Super admin panel and Admin login. They have their own sign-in, so they sit outside `api`.
   app.use("/api/super-admin", superAdminRouter);
   app.use("/api/admin-auth", adminAuthRouter);
+  app.use("/api/notifications", notificationsRouter); // lab users read the super admin's messages
 
   app.use("/api", api);
 

@@ -34,27 +34,27 @@ model SuperAdmin {
 
 /// One lab = one admin account with its own database.
 model Tenant {
-  id                Int                @id @default(autoincrement())
-  labName           String             @map("lab_name") @db.VarChar(255)
-  adminName         String             @map("admin_name") @db.VarChar(255)
-  adminEmail        String             @unique @map("admin_email") @db.VarChar(190)
-  passwordHash      String             @map("password_hash") @db.VarChar(255)
+  id               Int             @id @default(autoincrement())
+  labName          String          @map("lab_name") @db.VarChar(255)
+  adminName        String          @map("admin_name") @db.VarChar(255)
+  adminEmail       String          @unique @map("admin_email") @db.VarChar(190)
+  passwordHash     String          @map("password_hash") @db.VarChar(255)
   /// The lab's database URL, encrypted (AES-256-GCM) with TENANT_SECRET.
-  dbUrlEncrypted    String?            @map("db_url_encrypted") @db.Text
+  dbUrlEncrypted   String?         @map("db_url_encrypted") @db.Text
   /// host:port/database, safe to show in the panel.
-  dbHost            String?            @map("db_host") @db.VarChar(255)
+  dbHost           String?         @map("db_host") @db.VarChar(255)
   /// Hash of host:port/database, so two labs can never share one database.
-  dbFingerprint     String?            @unique @map("db_fingerprint") @db.Char(64)
-  connectedAt       DateTime?          @map("connected_at")
-  lastLoginAt       DateTime?          @map("last_login_at")
-  failedLoginCount  Int                @default(0) @map("failed_login_count")
-  lockedUntil       DateTime?          @map("locked_until")
-  active            Boolean            @default(true)
-  createdAt         DateTime           @default(now()) @map("created_at")
-  updatedAt         DateTime           @updatedAt @map("updated_at")
-  users             TenantUser[]
-  sessions          TenantSession[]
-  notificationReads NotificationRead[]
+  dbFingerprint    String?         @unique @map("db_fingerprint") @db.Char(64)
+  connectedAt      DateTime?       @map("connected_at")
+  lastLoginAt      DateTime?       @map("last_login_at")
+  failedLoginCount Int             @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?       @map("locked_until")
+  active           Boolean         @default(true)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  users            TenantUser[]
+  sessions         TenantSession[]
+  notificationTargets NotificationTarget[]
 
   @@map("tenants")
 }
@@ -81,30 +81,32 @@ model TenantSession {
   @@map("tenant_sessions")
 }
 
+/// A message typed by the super admin, shown in the notification bar of the labs.
 model Notification {
-  id        Int                @id @default(autoincrement())
-  title     String             @db.VarChar(200)
-  message   String             @db.Text
-  createdAt DateTime           @default(now()) @map("created_at")
-  expiresAt DateTime?          @map("expires_at")
-  active    Boolean            @default(true)
-  reads     NotificationRead[]
+  id        Int                  @id @default(autoincrement())
+  title     String               @db.VarChar(160)
+  message   String               @db.Text
+  /// info | success | warning | critical
+  severity  String               @default("info") @db.VarChar(20)
+  /// true = every lab; false = only the labs listed in `targets`
+  allLabs   Boolean              @default(true) @map("all_labs")
+  /// false = hidden from the labs (kept in the panel)
+  active    Boolean              @default(true)
+  expiresAt DateTime?            @map("expires_at")
+  createdAt DateTime             @default(now()) @map("created_at")
+  targets   NotificationTarget[]
 
   @@index([active, createdAt])
   @@map("notifications")
 }
 
-model NotificationRead {
-  id             Int      @id @default(autoincrement())
-  notificationId Int      @map("notification_id")
-  tenantId       Int      @map("tenant_id")
-  userId         Int      @map("user_id")
-  readAt         DateTime @default(now()) @map("read_at")
+model NotificationTarget {
+  notificationId Int          @map("notification_id")
+  tenantId       Int          @map("tenant_id")
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([notificationId, tenantId, userId])
-  @@index([tenantId, userId])
-  @@map("notification_reads")
+  @@id([notificationId, tenantId])
+  @@index([tenantId])
+  @@map("notification_targets")
 }

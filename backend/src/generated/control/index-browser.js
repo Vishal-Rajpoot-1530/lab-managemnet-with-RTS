@@ -163,17 +163,16 @@ exports.Prisma.NotificationScalarFieldEnum = {
   id: 'id',
   title: 'title',
   message: 'message',
-  createdAt: 'createdAt',
+  severity: 'severity',
+  allLabs: 'allLabs',
+  active: 'active',
   expiresAt: 'expiresAt',
-  active: 'active'
+  createdAt: 'createdAt'
 };
 
-exports.Prisma.NotificationReadScalarFieldEnum = {
-  id: 'id',
+exports.Prisma.NotificationTargetScalarFieldEnum = {
   notificationId: 'notificationId',
-  tenantId: 'tenantId',
-  userId: 'userId',
-  readAt: 'readAt'
+  tenantId: 'tenantId'
 };
 
 exports.Prisma.SortOrder = {
@@ -212,7 +211,8 @@ exports.Prisma.TenantSessionOrderByRelevanceFieldEnum = {
 
 exports.Prisma.NotificationOrderByRelevanceFieldEnum = {
   title: 'title',
-  message: 'message'
+  message: 'message',
+  severity: 'severity'
 };
 
 
@@ -222,7 +222,7 @@ exports.Prisma.ModelName = {
   TenantUser: 'TenantUser',
   TenantSession: 'TenantSession',
   Notification: 'Notification',
-  NotificationRead: 'NotificationRead'
+  NotificationTarget: 'NotificationTarget'
 };
 
 /**
