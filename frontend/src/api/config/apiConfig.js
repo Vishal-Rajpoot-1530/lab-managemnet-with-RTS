@@ -1,3 +1,4 @@
+
 const env = import.meta.env;
 const BASE_URL=(env.VITE_API_BASE_URL||"http://localhost:4000/api").replace(/\/+$/,'');
 export const API_CONFIG=Object.freeze({
@@ -10,7 +11,7 @@ export const API_CONFIG=Object.freeze({
   PATIENTS:Object.freeze({BASE:"/patients",BY_ID:id=>`/patients/${id}`,SEARCH:"/patients/search"}),
   REFERRERS:Object.freeze({BASE:"/doctors",BY_ID:id=>`/doctors/${id}`}),
   AGENTS:Object.freeze({BASE:"/cases/agents",BY_ID:id=>`/cases/agents/${id}`}),
-  BUSINESS:Object.freeze({BASE:"/business",DAILY:"/business/daily",MONTHLY:"/business/monthly",REFERRAL_REPORTS:"/business/referral-reports",CASE_WISE_REPORT:"/business/case-wise-report",CASE_WISE_OPTIONS:"/business/case-wise-report/options",DASHBOARD:"/business/dashboard",DATA_EXPORT:"/business/data-export",DATA_EXPORT_FILE:id=>`/business/data-export/${id}/file`}),
+  BUSINESS:Object.freeze({BASE:"/business",DAILY:"/business/daily",MONTHLY:"/business/monthly",REFERRAL_REPORTS:"/business/referral-reports",CASE_WISE_REPORT:"/business/case-wise-report",CASE_WISE_OPTIONS:"/business/case-wise-report/options",DASHBOARD:"/business/dashboard",DUE_REPORTS:"/business/due-reports",DATA_EXPORT:"/business/data-export",DATA_EXPORT_FILE:id=>`/business/data-export/${id}/file`}),
   REPORTS:Object.freeze({BASE:"/reports",TODAY:"/reports/today",SEARCH:"/reports/search",BY_ID:id=>`/reports/${id}`}),
   LAB:Object.freeze({BASE:"/lab",TODAY:"/lab/today",TESTS:"/lab/tests"}),
   TESTS:Object.freeze({BASE:"/lab/tests",BY_ID:id=>`/lab/tests/${id}`}),

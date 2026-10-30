@@ -1,3 +1,4 @@
+
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { dayRange, iso, toNumber } from "../utils/format.js";
@@ -115,4 +116,68 @@ export async function dashboard() {
       test: r.bill.investigations.map((i) => i.name).join(", ") || "Laboratory report",
     })),
   };
+}
+
+// ---------------------------------------------------------------------
+// Due reports (Business > Due reports)
+// ---------------------------------------------------------------------
+/** An unpaid bill older than this many days is shown as "Overdue". */
+const OVERDUE_DAYS = 30;
+
+/** YYYY-MM-DD .. YYYY-MM-DD as whole local days. Anything else is ignored. */
+function dayWindow(from?: string, to?: string): { gte?: Date; lt?: Date } {
+  const parse = (value?: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+    return m ? { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) } : null;
+  };
+  const a = parse(from);
+  const b = parse(to);
+  return {
+    ...(a ? { gte: new Date(a.y, a.m - 1, a.d) } : {}),
+    ...(b ? { lt: new Date(b.y, b.m - 1, b.d + 1) } : {}),
+  };
+}
+
+/** Bills that still have a balance to pay, newest first. */
+export async function dueReports(f: { from?: string; to?: string; q?: string }) {
+  const window = dayWindow(f.from, f.to);
+  const q = f.q?.trim();
+
+  const bills = await prisma.bill.findMany({
+    where: {
+      ...LIVE,
+      balance: { gt: 0 },
+      ...(window.gte || window.lt ? { createdAt: window } : {}),
+      ...(q
+        ? { OR: [{ patientName: { contains: q } }, { regNo: { contains: q } }, { mobile: { contains: q } }, { uhid: { contains: q } }] }
+        : {}),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 2000,
+    select: {
+      id: true, regNo: true, patientName: true, patientId: true, uhid: true, mobile: true,
+      createdAt: true, total: true, discount: true, received: true, balance: true,
+    },
+  });
+
+  const now = Date.now();
+
+  return bills.map((b) => {
+    const received = toNumber(b.received);
+    const ageDays = (now - b.createdAt.getTime()) / DAY;
+
+    return {
+      id: b.id,
+      billNo: b.regNo,
+      patientName: b.patientName,
+      patientId: b.uhid ?? (b.patientId ? String(b.patientId) : ""),
+      mobile: b.mobile,
+      date: iso(b.createdAt),
+      total: toNumber(b.total),
+      discount: toNumber(b.discount),
+      paid: received,
+      outstanding: toNumber(b.balance),
+      status: ageDays > OVERDUE_DAYS ? "Overdue" : received > 0 ? "Partially Paid" : "Pending",
+    };
+  });
 }

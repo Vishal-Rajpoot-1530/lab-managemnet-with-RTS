@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import { actorName } from "../middleware/auth.js";
 import * as activity from "../services/activityService.js";
@@ -18,6 +19,8 @@ r.get("/monthly", asyncHandler(async (req, res) => res.json(await business.month
 r.get("/referral-reports", asyncHandler(async (req, res) =>
   res.json(await business.referralReports({ ...range(req.query), period: query(req.query.period) }))));
 r.get("/dashboard", asyncHandler(async (_req, res) => res.json(await dashboard.dashboard())));
+r.get("/due-reports", asyncHandler(async (req, res) =>
+  res.json({ items: await dashboard.dueReports({ from: query(req.query.from), to: query(req.query.to), q: query(req.query.q) }) })));
 r.get("/dues", asyncHandler(async (req, res) => res.json(await business.dues(range(req.query)))));
 
 r.get("/activities", asyncHandler(async (req, res) => {
