@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { User } from "@prisma/client";
 import { controlPrisma, currentTenantId, prisma } from "../lib/prisma.js";
-import { findLoginTenant, recordTenantSession, registerLogin, runInTenant, unregisterLogin } from "../lib/tenantAccess.js";
+import { findLoginTenant, recordTenantSession, registerLogin, runInTenant, unregisterLogin, verifyLabAdmin } from "../lib/tenantAccess.js";
 import { signToken } from "../middleware/auth.js";
 import { ApiError, badRequest, conflict } from "../utils/ApiError.js";
 import { isEmail, optText, reqText, text } from "../utils/validate.js";
@@ -56,7 +56,8 @@ async function provisionDoctorLogin(email: string, password: string) {
  * identity = e-mail or mobile number. Employees and doctors use the same form.
  * With several labs, an e-mail is matched to its lab first and the sign-in then runs
  * inside that lab's database. Mobile numbers cannot be matched to a lab, so use the
- * email. Lab admins use the Admin login page instead.
+ * email. A lab admin may also sign in here once the lab's database has been connected on
+ * the Admin login page (the first connection needs the database URL).
  */
 export async function login(identity: string, password: string, ctx: LoginContext) {
   const value = identity.trim();
@@ -65,12 +66,30 @@ export async function login(identity: string, password: string, ctx: LoginContex
   if (currentTenantId()) return loginInCurrentLab(identity, password, ctx);
 
   const lab = value.includes("@") ? await findLoginTenant(value.toLowerCase()) : null;
-  if (lab?.isAdmin) throw new ApiError(403, "USE_ADMIN_LOGIN", "Lab admins sign in on the Admin login page.");
+  if (lab?.isAdmin) return signInLabAdmin(value.toLowerCase(), identity, password, ctx);
   if (lab) return runInTenant(lab.tenantId, () => loginInCurrentLab(identity, password, ctx));
 
   // The main database holds no lab users, so an unknown email gets the same answer and timing as a wrong password.
   await bcrypt.compare(password, DUMMY_HASH);
   throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid email or password.");
+}
+
+/** A lab admin signing in on the normal login page. Needs the database to be connected already. */
+async function signInLabAdmin(email: string, identity: string, password: string, ctx: LoginContext) {
+  const tenant = await verifyLabAdmin(email, password);
+
+  if (!tenant.dbUrlEncrypted) {
+    throw new ApiError(409, "LAB_NOT_CONNECTED", "Your database is not connected yet. Sign in once on the Admin login page and enter your database URL.");
+  }
+
+  return runInTenant(tenant.id, async () => {
+    // The lab account's password is the one that counts: keep the admin's login inside the lab in step with it.
+    await prisma.user.updateMany({
+      where: { email: tenant.adminEmail },
+      data: { passwordHash: tenant.passwordHash, active: true, failedLoginCount: 0, lockedUntil: null },
+    });
+    return loginInCurrentLab(identity, password, ctx);
+  });
 }
 
 async function loginInCurrentLab(identity: string, password: string, ctx: LoginContext) {

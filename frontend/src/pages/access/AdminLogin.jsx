@@ -20,7 +20,7 @@ export default function AdminLogin() {
     setBusy(true);
     try {
       await authApi.adminLogin(email, password, databaseUrl);
-      window.location.assign("/"); // reload so every page starts with the new session
+      window.location.assign("/dashboard"); // straight to the dashboard, the same place the normal login goes
     } catch (err) {
       setError(err.message || "Could not sign in. Please try again.");
       setBusy(false);
@@ -72,7 +72,8 @@ export default function AdminLogin() {
           </button>
 
           <p className="aa-note">
-            Employees do not use this page. They sign in on the normal login page with their own email and password.
+            After your database is connected, you can also sign in on the normal login page with just your email and
+            password. Employees always use the normal login page.
           </p>
         </form>
       </section>

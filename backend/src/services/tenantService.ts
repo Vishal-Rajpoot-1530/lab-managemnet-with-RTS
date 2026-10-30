@@ -10,7 +10,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { Tenant } from "../generated/control/index.js";
 import { clientFor, controlPrisma, dropClient } from "../lib/prisma.js";
 import { decrypt, encrypt } from "../lib/secretBox.js";
-import { forgetTenant, runInTenant, withPool } from "../lib/tenantAccess.js";
+import { forgetTenant, runInTenant, verifyLabAdmin, withPool } from "../lib/tenantAccess.js";
 import { ApiError, badRequest, conflict, notFound } from "../utils/ApiError.js";
 import { asBody, isEmail, reqText, text } from "../utils/validate.js";
 import { setupLabDefaults } from "../bootstrap.js";
@@ -250,29 +250,8 @@ export async function adminLogin(input: unknown, ctx: LoginContext) {
   const password = typeof body.password === "string" ? body.password : "";
   const databaseUrl = text(body.databaseUrl, 2000);
 
-  const tenant = email ? await controlPrisma.tenant.findUnique({ where: { adminEmail: email } }) : null;
+  const tenant = await verifyLabAdmin(email, password);
   const now = new Date();
-
-  if (tenant?.lockedUntil && tenant.lockedUntil > now) {
-    const minutes = Math.max(1, Math.ceil((tenant.lockedUntil.getTime() - now.getTime()) / 60_000));
-    throw new ApiError(423, "ACCOUNT_LOCKED", `Too many failed attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
-  }
-
-  const ok = await bcrypt.compare(password, tenant?.passwordHash ?? DUMMY_HASH);
-
-  if (!tenant || !ok) {
-    if (tenant) {
-      const failed = tenant.failedLoginCount + 1;
-      const lock = failed >= MAX_FAILED;
-      await controlPrisma.tenant.update({
-        where: { id: tenant.id },
-        data: { failedLoginCount: lock ? 0 : failed, lockedUntil: lock ? new Date(now.getTime() + LOCK_MINUTES * 60_000) : tenant.lockedUntil },
-      });
-    }
-    throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid email or password.");
-  }
-
-  if (!tenant.active) throw new ApiError(403, "ACCOUNT_DISABLED", "This lab account has been disabled. Contact the platform administrator.");
 
   // --- which database? (typed now, or the one saved from an earlier sign-in)
   let rawUrl = databaseUrl;

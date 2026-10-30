@@ -159,6 +159,23 @@ exports.Prisma.TenantSessionScalarFieldEnum = {
   expiresAt: 'expiresAt'
 };
 
+exports.Prisma.NotificationScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  message: 'message',
+  createdAt: 'createdAt',
+  expiresAt: 'expiresAt',
+  active: 'active'
+};
+
+exports.Prisma.NotificationReadScalarFieldEnum = {
+  id: 'id',
+  notificationId: 'notificationId',
+  tenantId: 'tenantId',
+  userId: 'userId',
+  readAt: 'readAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -193,12 +210,19 @@ exports.Prisma.TenantSessionOrderByRelevanceFieldEnum = {
   tokenHash: 'tokenHash'
 };
 
+exports.Prisma.NotificationOrderByRelevanceFieldEnum = {
+  title: 'title',
+  message: 'message'
+};
+
 
 exports.Prisma.ModelName = {
   SuperAdmin: 'SuperAdmin',
   Tenant: 'Tenant',
   TenantUser: 'TenantUser',
-  TenantSession: 'TenantSession'
+  TenantSession: 'TenantSession',
+  Notification: 'Notification',
+  NotificationRead: 'NotificationRead'
 };
 
 /**
