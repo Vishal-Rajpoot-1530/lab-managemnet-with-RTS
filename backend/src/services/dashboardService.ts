@@ -1,4 +1,3 @@
-
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { dayRange, iso, toNumber } from "../utils/format.js";
@@ -6,113 +5,70 @@ import { dayRange, iso, toNumber } from "../utils/format.js";
 const DAY = 86_400_000;
 const LIVE: Prisma.BillWhereInput = { status: { not: "Cancelled" } };
 
-/** Statuses that mean "the report is finished" (matched without regard to upper/lower case). */
-const DONE = ["Completed", "Complete", "Reported", "Final", "Finalized", "Verified", "Done"];
+/** How many rows each popup list holds (the totals on the cards are always exact). */
+const LIST_LIMIT = 300;
+
+const names = (list: { name: string }[]) => list.map((i) => i.name).join(", ") || "—";
 
 /**
- * A report is finished when it has a reported time (set when it is marked completed, cleared
- * when it is reopened) or its status is one of the finished statuses above.
+ * Overall overview of the signed-in lab (not just today):
+ *  - all patients
+ *  - completed bills  = bills with no balance left
+ *  - pending bills    = bills that still have a balance
+ *  - total collection = every payment received
  */
-const FINISHED = { OR: [{ reportedAt: { not: null } }, { status: { in: DONE } }] } satisfies Prisma.ReportWhereInput;
-
-/** Lab bills whose report is missing or not finished yet. */
-const PENDING: Prisma.BillWhereInput = {
-  ...LIVE,
-  investigations: { some: { modality: "lab" } },
-  NOT: { report: { is: FINISHED } },
-};
-
-const patientStatus = (reportStatus?: string | null, reportedAt?: Date | null) => {
-  const s = (reportStatus ?? "").toLowerCase();
-  if (reportedAt || DONE.some((d) => d.toLowerCase() === s)) return "Completed";
-  if (s === "in progress") return "In Progress";
-  return "Registered";
-};
-
-/** Finished in `range`: reported then, or (no reported time) set to a finished status then. */
-const completedIn = (range: { gte: Date; lt: Date }) => ({
-  OR: [{ reportedAt: range }, { reportedAt: null, status: { in: DONE }, updatedAt: range }],
-});
-
-/** Everything the Dashboard page shows, for the signed-in lab. */
 export async function dashboard() {
   const range = dayRange();
-  const start = new Date(range.gte as unknown as Date);
-  const end = new Date(range.lt as unknown as Date);
-  const today = { gte: start, lt: end };
-  const yesterday = { gte: new Date(start.getTime() - DAY), lt: start };
+  const today = { gte: new Date(range.gte as unknown as Date), lt: new Date(range.lt as unknown as Date) };
 
   const [
-    billsToday,
-    billsYesterday,
-    labCompletedToday,
-    scanCompletedToday,
-    labCompletedYesterday,
-    scanCompletedYesterday,
-    inProgress,
-    pendingTotal,
-    pendingToday,
+    patientTotal,
+    patientsToday,
+    patients,
+    completedCount,
+    completedBills,
     pendingBills,
-    collectedTodayTotal,
-    collectedYesterday,
+    dueTotals,
+    collectedTotal,
+    collectedToday,
     collections,
     dues,
-    dueTotals,
     activities,
   ] = await Promise.all([
-    prisma.bill.findMany({
-      where: { ...LIVE, createdAt: today },
+    prisma.patient.count(),
+    prisma.patient.count({ where: { createdAt: today } }),
+    prisma.patient.findMany({
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: 300,
-      select: {
-        id: true, regNo: true, patientName: true, age: true, sex: true, createdAt: true,
-        investigations: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }], select: { name: true } },
-        report: { select: { status: true, reportedAt: true } },
-      },
+      take: LIST_LIMIT,
+      select: { id: true, uhid: true, title: true, firstName: true, lastName: true, sex: true, years: true, mobile: true, createdAt: true },
     }),
-    prisma.bill.count({ where: { ...LIVE, createdAt: yesterday } }),
 
-    // Reports completed: laboratory reports ...
-    prisma.report.findMany({
-      where: completedIn(today) satisfies Prisma.ReportWhereInput,
-      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
-      take: 300,
-      select: {
-        id: true, regNo: true, patient: true, reportedAt: true, updatedAt: true,
-        bill: { select: { investigations: { where: { modality: "lab" }, select: { name: true } } } },
-      },
-    }),
-    // ... and scan reports (USG, X-ray, CT, ...). A scan report counts once it has a reported time.
-    prisma.radiologyReport.findMany({
-      where: completedIn(today) satisfies Prisma.RadiologyReportWhereInput,
-      orderBy: [{ reportedAt: "desc" }, { id: "desc" }],
-      take: 300,
-      select: { id: true, studyName: true, modality: true, reportedAt: true, updatedAt: true, bill: { select: { regNo: true, patientName: true } } },
-    }),
-    prisma.report.count({ where: completedIn(yesterday) }),
-    prisma.radiologyReport.count({ where: completedIn(yesterday) }),
-    prisma.report.count({ where: { status: "In progress" } }),
-
-    // Pending reports: lab bills whose report is missing or not completed.
-    prisma.bill.count({ where: PENDING }),
-    prisma.bill.count({ where: { ...PENDING, createdAt: today } }),
+    prisma.bill.count({ where: { ...LIVE, balance: { lte: 0 } } }),
     prisma.bill.findMany({
-      where: PENDING,
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }], // longest waiting first
-      take: 300,
+      where: { ...LIVE, balance: { lte: 0 } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: LIST_LIMIT,
       select: {
-        id: true, regNo: true, patientName: true, createdAt: true,
-        investigations: { where: { modality: "lab" }, orderBy: [{ sortOrder: "asc" }, { id: "asc" }], select: { name: true } },
-        report: { select: { status: true } },
+        id: true, regNo: true, patientName: true, createdAt: true, total: true,
+        investigations: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }], select: { name: true } },
       },
     }),
+    prisma.bill.findMany({
+      where: { ...LIVE, balance: { gt: 0 } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }], // waiting the longest first
+      take: LIST_LIMIT,
+      select: {
+        id: true, regNo: true, patientName: true, createdAt: true, balance: true, received: true,
+        investigations: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }], select: { name: true } },
+      },
+    }),
+    prisma.bill.aggregate({ _sum: { balance: true }, _count: { _all: true }, where: { ...LIVE, balance: { gt: 0 } } }),
 
+    prisma.billTransaction.aggregate({ _sum: { amount: true } }),
     prisma.billTransaction.aggregate({ _sum: { amount: true }, where: { paidAt: today } }),
-    prisma.billTransaction.aggregate({ _sum: { amount: true }, where: { paidAt: yesterday } }),
     prisma.billTransaction.findMany({
-      where: { paidAt: today },
       orderBy: [{ paidAt: "desc" }, { id: "desc" }],
-      take: 300,
+      take: LIST_LIMIT,
       select: { id: true, amount: true, mode: true, paidAt: true, bill: { select: { regNo: true, patientName: true } } },
     }),
 
@@ -122,44 +78,13 @@ export async function dashboard() {
       take: 6,
       select: { id: true, regNo: true, patientName: true, createdAt: true, balance: true },
     }),
-    prisma.bill.aggregate({ _sum: { balance: true }, _count: { _all: true }, where: { ...LIVE, balance: { gt: 0 } } }),
 
     prisma.activity.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 5 }),
   ]);
 
-  // ---- completed reports (lab + scans), newest first
-  const completedReports = [
-    ...labCompletedToday.map((r) => ({
-      id: r.regNo,
-      reportId: r.id,
-      patient: r.patient,
-      status: "Completed",
-      kind: "Laboratory",
-      time: iso(r.reportedAt ?? r.updatedAt),
-      test: r.bill.investigations.map((i) => i.name).join(", ") || "Laboratory report",
-    })),
-    ...scanCompletedToday.map((r) => ({
-      id: r.bill.regNo,
-      reportId: r.id,
-      patient: r.bill.patientName,
-      status: "Completed",
-      kind: r.modality,
-      time: iso(r.reportedAt ?? r.updatedAt),
-      test: r.studyName,
-    })),
-  ].sort((a, b) => String(b.time).localeCompare(String(a.time)));
+  const pendingCount = dueTotals._count._all;
+  const allBills = completedCount + pendingCount;
 
-  // ---- pending reports
-  const pendingReports = pendingBills.map((b) => ({
-    id: b.regNo,
-    billId: b.id,
-    patient: b.patientName,
-    status: (b.report?.status ?? "").toLowerCase() === "in progress" ? "In Progress" : "Pending",
-    createdAt: iso(b.createdAt),
-    test: b.investigations.map((i) => i.name).join(", ") || "Laboratory report",
-  }));
-
-  // ---- money received today
   const collectionRows = collections.map((t) => ({
     id: t.id,
     regNo: t.bill.regNo,
@@ -172,30 +97,50 @@ export async function dashboard() {
   }));
 
   return {
-    date: iso(start),
     kpis: {
-      patients: { today: billsToday.length, yesterday: billsYesterday },
-      reportsCompleted: {
-        today: completedReports.length,
-        yesterday: labCompletedYesterday + scanCompletedYesterday,
-        awaitingReview: inProgress,
-      },
-      pending: { total: pendingTotal, createdToday: pendingToday },
-      collection: { today: toNumber(collectedTodayTotal._sum.amount ?? 0), yesterday: toNumber(collectedYesterday._sum.amount ?? 0) },
+      patients: { total: patientTotal, newToday: patientsToday },
+      completedBills: { total: completedCount, share: allBills ? Math.round((completedCount / allBills) * 100) : 0 },
+      pendingBills: { total: pendingCount, outstanding: toNumber(dueTotals._sum.balance ?? 0) },
+      collection: { total: toNumber(collectedTotal._sum.amount ?? 0), today: toNumber(collectedToday._sum.amount ?? 0) },
     },
+
     dues: dues.map((b) => ({ id: b.id, regNo: b.regNo, patient: b.patientName, createdAt: iso(b.createdAt), due: toNumber(b.balance) })),
-    duesSummary: { count: dueTotals._count._all, amount: toNumber(dueTotals._sum.balance ?? 0) },
+    duesSummary: { count: pendingCount, amount: toNumber(dueTotals._sum.balance ?? 0) },
     transactions: collectionRows.slice(0, 6),
-    collections: collectionRows,
     activities: activities.map((a) => ({
       id: a.id, type: a.type, summary: a.summary, user: a.userName ?? "", createdAt: iso(a.createdAt),
     })),
-    todayPatients: billsToday.map((b) => ({
-      id: b.regNo, billId: b.id, name: b.patientName, age: b.age ?? "", gender: b.sex ?? "",
-      tests: b.investigations.map((i) => i.name).join(", ") || "—", status: patientStatus(b.report?.status, b.report?.reportedAt),
+
+    // popup lists
+    patients: patients.map((p) => ({
+      id: p.uhid ?? String(p.id),
+      patientId: p.id,
+      name: [p.title, p.firstName, p.lastName].filter(Boolean).join(" "),
+      age: p.years ?? "",
+      gender: p.sex ?? "",
+      tests: p.mobile ? `Mobile: ${p.mobile}` : "No mobile number",
+      createdAt: iso(p.createdAt),
+      status: "Registered",
     })),
-    completedReports,
-    pendingReports,
+    completedBills: completedBills.map((b) => ({
+      id: b.regNo,
+      billId: b.id,
+      patient: b.patientName,
+      test: names(b.investigations),
+      amount: toNumber(b.total),
+      createdAt: iso(b.createdAt),
+      status: "Paid",
+    })),
+    pendingBills: pendingBills.map((b) => ({
+      id: b.regNo,
+      billId: b.id,
+      patient: b.patientName,
+      test: names(b.investigations),
+      amount: toNumber(b.balance),
+      createdAt: iso(b.createdAt),
+      status: toNumber(b.received) > 0 ? "Partially Paid" : "Unpaid",
+    })),
+    collections: collectionRows,
   };
 }
 

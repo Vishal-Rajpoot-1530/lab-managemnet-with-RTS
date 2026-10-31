@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -32,67 +31,32 @@ const REFRESH_INTERVAL = 60_000;
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-const rupees = (value) =>
-  `Rs.${Number(value || 0).toLocaleString("en-IN")}`;
-
-const rupeeSymbol = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const rupees = (value) => `Rs.${Number(value || 0).toLocaleString("en-IN")}`;
+const rupeeSymbol = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
 const formatDay = (value) => {
   const date = value ? new Date(value) : null;
-
-  return date && !Number.isNaN(date.getTime())
-    ? date.toLocaleDateString("en-GB")
-    : "—";
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString("en-GB") : "—";
 };
 
 const formatTime = (value) => {
   const date = value ? new Date(value) : null;
-
   return date && !Number.isNaN(date.getTime())
-    ? date.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+    ? date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
     : "";
 };
 
 function timeAgo(value) {
-  const minutes = Math.round(
-    (Date.now() - new Date(value).getTime()) / 60000
-  );
+  const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000);
 
-  if (!Number.isFinite(minutes) || minutes < 1) {
-    return "just now";
-  }
-
-  if (minutes < 60) {
-    return `${minutes} min ago`;
-  }
+  if (!Number.isFinite(minutes) || minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
 
   const hours = Math.round(minutes / 60);
-
-  if (hours < 24) {
-    return `${hours} hr ago`;
-  }
+  if (hours < 24) return `${hours} hr ago`;
 
   const days = Math.round(hours / 24);
-
   return `${days} day${days === 1 ? "" : "s"} ago`;
-}
-
-function compareText(now, before) {
-  if (before > 0) {
-    const change = ((now - before) / before) * 100;
-
-    return `${change >= 0 ? "+" : ""}${change.toFixed(
-      1
-    )}% vs yesterday`;
-  }
-
-  return now > 0
-    ? "Nothing recorded yesterday"
-    : "No change vs yesterday";
 }
 
 /* "reportUpdated" -> "Report updated" */
@@ -108,24 +72,20 @@ const humanize = (type) => {
 function activityStyle(type) {
   const key = String(type || "").toLowerCase();
 
-  if (/payment|transaction|receipt/.test(key)) {
-    return { tone: "purple", icon: CreditCard };
-  }
-
-  if (/report/.test(key)) {
-    return { tone: "green", icon: CircleCheck };
-  }
-
-  if (/bill|patient|case|created|register/.test(key)) {
-    return { tone: "blue", icon: UserRoundPlus };
-  }
-
-  if (/cancel|delete|remove/.test(key)) {
-    return { tone: "amber", icon: ClipboardList };
-  }
+  if (/payment|transaction|receipt/.test(key)) return { tone: "purple", icon: CreditCard };
+  if (/report/.test(key)) return { tone: "green", icon: CircleCheck };
+  if (/bill|patient|case|created|register/.test(key)) return { tone: "blue", icon: UserRoundPlus };
+  if (/cancel|delete|remove/.test(key)) return { tone: "amber", icon: ClipboardList };
 
   return { tone: "blue", icon: Activity };
 }
+
+/* Status words -> the status colours that already exist in dashboard.css */
+const STATUS_CLASS = {
+  paid: "completed",
+  unpaid: "pending",
+  "partially-paid": "in-progress",
+};
 
 /* ------------------------------------------------------------------ */
 /* Reusable dashboard panel                                            */
@@ -141,11 +101,7 @@ function Panel({ title, subtitle, viewAll, children }) {
         </div>
 
         {viewAll && (
-          <button
-            type="button"
-            className="dash-view-all"
-            onClick={viewAll}
-          >
+          <button type="button" className="dash-view-all" onClick={viewAll}>
             View all
             <ChevronRight size={14} />
           </button>
@@ -159,14 +115,7 @@ function Panel({ title, subtitle, viewAll, children }) {
 
 function EmptyRow({ children }) {
   return (
-    <div
-      className="dash-row"
-      style={{
-        justifyContent: "center",
-        opacity: 0.7,
-        padding: "22px 12px",
-      }}
-    >
+    <div className="dash-row" style={{ justifyContent: "center", opacity: 0.7, padding: "22px 12px" }}>
       {children}
     </div>
   );
@@ -176,14 +125,7 @@ function EmptyRow({ children }) {
 /* KPI card                                                            */
 /* ------------------------------------------------------------------ */
 
-function KpiCard({
-  label,
-  value,
-  meta,
-  icon: Icon,
-  tone,
-  onClick,
-}) {
+function KpiCard({ label, value, meta, icon: Icon, tone, onClick }) {
   const clickable = Boolean(onClick);
 
   return (
@@ -191,10 +133,7 @@ function KpiCard({
       className={`dash-kpi ${clickable ? "dash-kpi-clickable" : ""}`}
       onClick={onClick}
       onKeyDown={(event) => {
-        if (
-          clickable &&
-          (event.key === "Enter" || event.key === " ")
-        ) {
+        if (clickable && (event.key === "Enter" || event.key === " ")) {
           event.preventDefault();
           onClick();
         }
@@ -202,11 +141,7 @@ function KpiCard({
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       aria-haspopup={clickable ? "dialog" : undefined}
-      title={
-        clickable
-          ? `View ${label.toLowerCase()} list`
-          : undefined
-      }
+      title={clickable ? `View ${label.toLowerCase()} list` : undefined}
     >
       <div className={`dash-kpi-icon ${tone}`}>
         <Icon size={19} strokeWidth={2} />
@@ -221,75 +156,67 @@ function KpiCard({
           {meta}
         </small>
 
-        {clickable && (
-          <span className="dash-kpi-hint">
-            Click to view list →
-          </span>
-        )}
+        {clickable && <span className="dash-kpi-hint">Click to view list →</span>}
       </div>
     </article>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Records popup: patients, completed, pending and collection           */
+/* Records popup: patients, completed bills, pending bills, collection  */
 /* ------------------------------------------------------------------ */
 
-function RecordsModal({
-  type,
-  patients = [],
-  reports = [],
-  pendingReports = [],
-  transactions = [],
-  onClose,
-}) {
+function RecordsModal({ type, lists, totals, onClose }) {
   const [search, setSearch] = useState("");
 
   const isPatients = type === "patients";
-  const isCompleted = type === "reports";
-  const isPending = type === "pending";
   const isCollection = type === "collection";
+  const isCompleted = type === "completed";
+  const isPending = type === "pending";
 
   const config = {
     patients: {
-      title: "Today's patients",
-      subtitle: "Patient registrations and test details",
+      title: "All patients",
+      subtitle: "Every registered patient, newest first",
       icon: Users,
       tone: "blue",
-      records: patients,
-      empty: "Records for today will appear here.",
+      records: lists.patients,
+      empty: "Registered patients will appear here.",
+      noun: "patients",
     },
-    reports: {
-      title: "Reports completed",
-      subtitle: "Reports completed by the laboratory today",
+    completed: {
+      title: "Completed bills",
+      subtitle: "Bills with no balance left to pay",
       icon: FileText,
       tone: "green",
-      records: reports,
-      empty: "Completed reports will appear here.",
+      records: lists.completedBills,
+      empty: "Fully paid bills will appear here.",
+      noun: "bills",
     },
     pending: {
-      title: "Pending reports",
-      subtitle: "Reports awaiting completion or review",
+      title: "Pending bills",
+      subtitle: "Bills that still have a balance to pay, oldest first",
       icon: ClipboardList,
       tone: "amber",
-      records: pendingReports,
-      empty: "There are no pending reports to display.",
+      records: lists.pendingBills,
+      empty: "There are no pending bills.",
+      noun: "bills",
     },
     collection: {
-      title: "Today's collection",
-      subtitle: "Payments received from patients today",
+      title: "Total collection",
+      subtitle: "Payments received from patients, newest first",
       icon: ReceiptIndianRupee,
       tone: "purple",
-      records: transactions,
-      empty: "Payments received today will appear here.",
+      records: lists.collections,
+      empty: "Payments received will appear here.",
+      noun: "payments",
     },
   };
 
   const current = config[type] || config.patients;
   const ModalIcon = current.icon;
-  const records = Array.isArray(current.records)
-    ? current.records
-    : [];
+  const records = Array.isArray(current.records) ? current.records : [];
+  const totalCount = totals?.[type] ?? records.length;
 
   const filteredRecords = records.filter((record) =>
     Object.values(record || {})
@@ -301,15 +228,11 @@ function RecordsModal({
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") onClose();
     };
 
     document.addEventListener("keydown", handleKeyDown);
-
-    return () =>
-      document.removeEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   useEffect(() => {
@@ -321,118 +244,34 @@ function RecordsModal({
     };
   }, []);
 
-  const getRecordName = (record) => {
-    if (isPatients) {
-      return record.name || "Unknown patient";
-    }
-
-    return (
-      record.patientName ||
-      record.patient ||
-      record.name ||
-      "Unknown patient"
-    );
-  };
-
-  const getRecordId = (record) =>
-    record.regNo || record.registrationNo || record.id || record.reportId || record.billId || "—";
-
-  const getRecordTest = (record) => {
-    return (
-      record.tests ||
-      record.test ||
-      record.testName ||
-      record.testNames ||
-      record.description ||
-      "—"
-    );
-  };
-
-  const getRecordStatus = (record) => {
-    if (record.status) {
-      return record.status;
-    }
-
-    if (isCollection) {
-      return "Paid";
-    }
-
-    if (isPending) {
-      return "Pending";
-    }
-
-    return "—";
-  };
-
-  const getRecordTime = (record) => {
-    return (
-      record.time ||
-      record.createdAt ||
-      record.updatedAt ||
-      record.completedAt ||
-      record.date ||
-      null
-    );
-  };
-
-  const getRecordAmount = (record) => {
-    return Number(
-      record.amount ??
-      record.paidAmount ??
-      record.collectedAmount ??
-      record.paymentAmount ??
-      0
-    );
-  };
-
-  const collectionTotal = filteredRecords.reduce(
-    (total, record) => total + getRecordAmount(record),
-    0
-  );
+  const amountOf = (record) => Number(record.amount ?? 0);
+  const collectionTotal = filteredRecords.reduce((sum, record) => sum + amountOf(record), 0);
 
   return (
     <div
       className="dash-modal-overlay"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
+        if (event.target === event.currentTarget) onClose();
       }}
     >
-      <section
-        className="dash-record-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dash-modal-title"
-      >
-        {/* Header */}
+      <section className="dash-record-modal" role="dialog" aria-modal="true" aria-labelledby="dash-modal-title">
         <header className="dash-modal-header">
           <div className="dash-modal-heading">
-            <div
-              className={`dash-modal-icon ${current.tone}`}
-            >
+            <div className={`dash-modal-icon ${current.tone}`}>
               <ModalIcon size={22} />
             </div>
 
             <div>
-              <h2 id="dash-modal-title">
-                {current.title}
-              </h2>
+              <h2 id="dash-modal-title">{current.title}</h2>
               <p>{current.subtitle}</p>
             </div>
           </div>
 
-          <button
-            type="button"
-            className="dash-modal-close"
-            onClick={onClose}
-            aria-label="Close modal"
-          >
+          <button type="button" className="dash-modal-close" onClick={onClose} aria-label="Close modal">
             <X size={20} />
           </button>
         </header>
 
-        {/* Search */}
         <div className="dash-modal-toolbar">
           <div className="dash-modal-search">
             <Search size={18} />
@@ -440,20 +279,13 @@ function RecordsModal({
             <input
               type="search"
               value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
+              onChange={(event) => setSearch(event.target.value)}
               placeholder={`Search ${current.title.toLowerCase()}...`}
               aria-label={`Search ${current.title}`}
             />
 
             {search && (
-              <button
-                type="button"
-                className="dash-search-clear"
-                onClick={() => setSearch("")}
-                aria-label="Clear search"
-              >
+              <button type="button" className="dash-search-clear" onClick={() => setSearch("")} aria-label="Clear search">
                 <X size={15} />
               </button>
             )}
@@ -464,34 +296,43 @@ function RecordsModal({
           </span>
         </div>
 
-        {/* Records */}
         <div className="dash-modal-list">
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record, index) => {
-              const name = getRecordName(record);
-              const recordId = getRecordId(record);
-              const test = getRecordTest(record);
-              const status = getRecordStatus(record);
-              const recordTime = getRecordTime(record);
-
-              const statusClass = String(status)
-                .toLowerCase()
-                .replace(/\s+/g, "-");
+              const name = record.name || record.patient || "Unknown patient";
+              const status = record.status || "—";
+              const statusKey = String(status).toLowerCase().replace(/\s+/g, "-");
+              const statusClass = STATUS_CLASS[statusKey] || statusKey;
 
               const details = isPatients
                 ? [
-                  record.id,
-                  // record.age
-                  //   ? `${record.age} years`
-                  //   : null,
+                    record.id,
+                    record.age
+                      ? /[a-z]/i.test(String(record.age))
+                        ? record.age
+                        : `${record.age} years`
+                      : null,
+                    record.gender,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : isCollection
+                  ? `Reg. no. ${record.regNo ?? "—"}`
+                  : `Reg. no. ${record.id ?? "—"}`;
 
+              const lastLine = isPatients
+                ? `${record.tests} · Registered ${formatDay(record.createdAt)}`
+                : isCollection
+                  ? `${record.test} · ${formatDay(record.time)} ${formatTime(record.time)}`
+                  : `${record.test} · ${formatDay(record.createdAt)}`;
 
-                     record.age ? (/[a-z]/i.test(String(record.age)) ? record.age : `${record.age} years`) : null,
-                  record.gender,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")
-                : `ID: ${recordId}`;
+              const amountLine = isCollection
+                ? `+ ${rupeeSymbol(amountOf(record))}`
+                : isCompleted
+                  ? `Billed ${rupeeSymbol(amountOf(record))}`
+                  : isPending
+                    ? `Due ${rupeeSymbol(amountOf(record))}`
+                    : null;
 
               const avatar = String(name)
                 .split(" ")
@@ -501,44 +342,18 @@ function RecordsModal({
                 .toUpperCase();
 
               return (
-                <article
-                  className="dash-modal-record"
-                  key={`${record.id ?? recordId}-${index}`}
-                >
-                  <div className="dash-record-avatar">
-                    {avatar || "?"}
-                  </div>
+                <article className="dash-modal-record" key={`${record.billId ?? record.patientId ?? record.id}-${index}`}>
+                  <div className="dash-record-avatar">{avatar || "?"}</div>
 
                   <div className="dash-record-info">
                     <strong>{name}</strong>
+                    <span>{details}</span>
+                    <small>{lastLine}</small>
 
-                    <span>
-                      {isCollection
-                        ? `Bill/Record: ${recordId}`
-                        : details}
-                    </span>
-
-                    <small>
-                      {isPatients
-                        ? test
-                        : isCollection || isCompleted
-                          ? `${test} · ${formatTime(recordTime) || "Time unavailable"}`
-                          : `${test} · ${recordTime ? formatDay(recordTime) : "Date unavailable"}`}
-                    </small>
-
-                    {/* Payment details */}
-                    {isCollection && (
-                      <strong className="dash-modal-amount">
-                        + {rupeeSymbol(getRecordAmount(record))}
-                      </strong>
-                    )}
+                    {amountLine && <strong className="dash-modal-amount">{amountLine}</strong>}
                   </div>
 
-                  <span
-                    className={`dash-record-status ${statusClass}`}
-                  >
-                    {status}
-                  </span>
+                  <span className={`dash-record-status ${statusClass}`}>{status}</span>
                 </article>
               );
             })
@@ -546,23 +361,12 @@ function RecordsModal({
             <div className="dash-modal-empty">
               <Search size={28} />
 
-              <strong>
-                {records.length
-                  ? "No records found"
-                  : "Nothing to show yet"}
-              </strong>
+              <strong>{records.length ? "No records found" : "Nothing to show yet"}</strong>
 
-              <p>
-                {records.length
-                  ? "Try another name, ID, test, or status."
-                  : current.empty}
-              </p>
+              <p>{records.length ? "Try another name, ID, test, or status." : current.empty}</p>
 
               {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                >
+                <button type="button" onClick={() => setSearch("")}>
                   Clear search
                 </button>
               )}
@@ -570,7 +374,6 @@ function RecordsModal({
           )}
         </div>
 
-        {/* Collection total */}
         {isCollection && filteredRecords.length > 0 && (
           <div className="dash-modal-total">
             <span>Total shown</span>
@@ -578,24 +381,13 @@ function RecordsModal({
           </div>
         )}
 
-        {/* Footer */}
         <footer className="dash-modal-footer">
           <span>
-            Showing {filteredRecords.length}{" "}
-            {isPatients
-              ? "patients"
-              : isCompleted
-                ? "reports"
-                : isPending
-                  ? "pending reports"
-                  : "payments"}
+            Showing {filteredRecords.length} {current.noun}
+            {totalCount > records.length ? ` (latest ${records.length} of ${totalCount})` : ""}
           </span>
 
-          <button
-            type="button"
-            className="dash-modal-done"
-            onClick={onClose}
-          >
+          <button type="button" className="dash-modal-done" onClick={onClose}>
             Done
           </button>
         </footer>
@@ -620,23 +412,12 @@ export default function Dashboard() {
     setLoading(true);
 
     try {
-      const response = await businessApiService.dashboard();
-
-
-      console.log("Dashboard API response:", response);
-      console.log("Completed reports:", response?.completedReports);
-      console.log("Pending reports:", response?.pendingReports);
-
-      setData(response);
+      setData(await businessApiService.dashboard());
       setError("");
     } catch (err) {
-      if (err?.status === 401) {
-        return window.location.assign("/login");
-      }
+      if (err?.status === 401) return window.location.assign("/login");
 
-      setError(
-        err?.message || "Unable to load the dashboard."
-      );
+      setError(err?.message || "Unable to load the dashboard.");
     } finally {
       setLoading(false);
     }
@@ -646,7 +427,6 @@ export default function Dashboard() {
     load();
 
     const timer = setInterval(load, REFRESH_INTERVAL);
-
     return () => clearInterval(timer);
   }, [load]);
 
@@ -661,46 +441,38 @@ export default function Dashboard() {
   const dash = "—";
 
   /* ---------------------------------------------------------------- */
-  /* KPI cards                                                         */
+  /* KPI cards: overall, not just today                                */
   /* ---------------------------------------------------------------- */
 
   const kpis = [
     {
-      label: "Today's patients",
-      value: k ? k.patients.today : dash,
-      meta: k
-        ? compareText(k.patients.today, k.patients.yesterday)
-        : "Loading…",
+      label: "All patients",
+      value: k ? k.patients.total.toLocaleString("en-IN") : dash,
+      meta: k ? `${k.patients.newToday} new today` : "Loading…",
       icon: Users,
       tone: "blue",
       modal: "patients",
     },
     {
-      label: "Reports completed",
-      value: k ? k.reportsCompleted.today : dash,
-      meta: k
-        ? `${k.reportsCompleted.awaitingReview} in progress`
-        : "Loading…",
+      label: "Completed bills",
+      value: k ? k.completedBills.total.toLocaleString("en-IN") : dash,
+      meta: k ? `${k.completedBills.share}% of all bills` : "Loading…",
       icon: FileText,
       tone: "green",
-      modal: "reports",
+      modal: "completed",
     },
     {
-      label: "Pending reports",
-      value: k ? k.pending.total : dash,
-      meta: k
-        ? `${k.pending.createdToday} created today`
-        : "Loading…",
+      label: "Pending bills",
+      value: k ? k.pendingBills.total.toLocaleString("en-IN") : dash,
+      meta: k ? `${rupees(k.pendingBills.outstanding)} outstanding` : "Loading…",
       icon: ClipboardList,
       tone: "amber",
       modal: "pending",
     },
     {
-      label: "Today's collection",
-      value: k ? rupeeSymbol(k.collection.today) : dash,
-      meta: k
-        ? compareText(k.collection.today, k.collection.yesterday)
-        : "Loading…",
+      label: "Total collection",
+      value: k ? rupeeSymbol(k.collection.total) : dash,
+      meta: k ? `${rupeeSymbol(k.collection.today)} received today` : "Loading…",
       icon: ReceiptIndianRupee,
       tone: "purple",
       modal: "collection",
@@ -712,44 +484,22 @@ export default function Dashboard() {
   /* ---------------------------------------------------------------- */
 
   const quick = [
-    {
-      label: "Employee management",
-      description: "Manage staff access",
-      icon: Users,
-      path: "/manage/employees",
-      tone: "green",
-    },
-    {
-      label: "Browser security",
-      description: "Review security settings",
-      icon: ShieldCheck,
-      path: "/manage/browser-security",
-      tone: "blue",
-    },
-    {
-      label: "Doctor portal",
-      description: "Manage doctor access",
-      icon: Stethoscope,
-      path: "/manage/doctor-access",
-      tone: "purple",
-    },
+    { label: "Employee management", description: "Manage staff access", icon: Users, path: "/manage/employees", tone: "green" },
+    { label: "Browser security", description: "Review security settings", icon: ShieldCheck, path: "/manage/browser-security", tone: "blue" },
+    { label: "Doctor portal", description: "Manage doctor access", icon: Stethoscope, path: "/manage/doctor-access", tone: "purple" },
   ];
 
   return (
     <div className="dash-page">
       <div className="dash-shell">
-        {/* Dashboard header */}
         <header className="dash-header">
           <div className="dash-header-copy">
             <div className="dash-eyebrow">
               <FlaskConical size={14} />
-              LABORATORY OVERVIEW
+              OVERALL OVERVIEW
             </div>
 
-            <p>
-              Here is what is happening across your laboratory
-              today.
-            </p>
+            <p>Here is an overall summary of your laboratory: patients, bills and payments.</p>
           </div>
 
           <div className="dash-header-meta">
@@ -775,7 +525,6 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* Error message */}
         {error && (
           <div
             role="alert"
@@ -798,7 +547,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* KPI grid */}
         <section className="dash-kpi-grid">
           {kpis.map((item) => (
             <KpiCard
@@ -808,27 +556,17 @@ export default function Dashboard() {
               meta={item.meta}
               icon={item.icon}
               tone={item.tone}
-              onClick={
-                data
-                  ? () => setActiveModal(item.modal)
-                  : undefined
-              }
+              onClick={data ? () => setActiveModal(item.modal) : undefined}
             />
           ))}
         </section>
 
-        {/* Quick actions */}
         <section className="dash-quick-grid">
           {quick.map((item) => {
             const Icon = item.icon;
 
             return (
-              <button
-                type="button"
-                className="dash-quick"
-                key={item.label}
-                onClick={() => navigate(item.path)}
-              >
+              <button type="button" className="dash-quick" key={item.label} onClick={() => navigate(item.path)}>
                 <span className={`dash-qicon ${item.tone}`}>
                   <Icon size={18} />
                 </span>
@@ -838,16 +576,12 @@ export default function Dashboard() {
                   <small>{item.description}</small>
                 </span>
 
-                <ArrowRight
-                  size={16}
-                  className="dash-arrow"
-                />
+                <ArrowRight size={16} className="dash-arrow" />
               </button>
             );
           })}
         </section>
 
-        {/* Main dashboard layout */}
         <div className="dash-layout">
           <main className="dash-main">
             <div className="dash-two">
@@ -856,14 +590,10 @@ export default function Dashboard() {
                 title="Payments due"
                 subtitle={
                   data?.duesSummary?.count
-                    ? `${data.duesSummary.count} bills · ${rupees(
-                      data.duesSummary.amount
-                    )} outstanding`
+                    ? `${data.duesSummary.count} bills · ${rupees(data.duesSummary.amount)} outstanding`
                     : "Outstanding patient balances"
                 }
-                viewAll={() =>
-                  navigate("/business/due-reports")
-                }
+                viewAll={() => navigate("/business/due-reports")}
               >
                 <div className="dash-table-head dash-payment-grid">
                   <span>PATIENT</span>
@@ -873,54 +603,30 @@ export default function Dashboard() {
 
                 <div className="dash-table-body">
                   {(data?.dues ?? []).map((item) => (
-                    <div
-                      className="dash-row dash-payment-grid"
-                      key={item.id}
-                    >
+                    <div className="dash-row dash-payment-grid" key={item.id}>
                       <div className="dash-patient">
                         <strong>{item.patient}</strong>
 
                         <small>
-                          Reg. {item.regNo} <i>•</i>{" "}
-                          {formatDay(item.createdAt)}
+                          Reg. {item.regNo} <i>•</i> {formatDay(item.createdAt)}
                         </small>
                       </div>
 
-                      <span className="dash-due">
-                        {rupees(item.due)}
-                      </span>
+                      <span className="dash-due">{rupees(item.due)}</span>
 
-                      <button
-                        type="button"
-                        className="dash-icon-btn"
-                        title="Open billing"
-                        onClick={() => navigate("/cases/bills")}
-                      >
+                      <button type="button" className="dash-icon-btn" title="Open billing" onClick={() => navigate("/cases/bills")}>
                         <ReceiptIndianRupee size={15} />
                       </button>
                     </div>
                   ))}
 
-                  {data && (data.dues ?? []).length === 0 && (
-                    <EmptyRow>
-                      No outstanding balances
-                    </EmptyRow>
-                  )}
-
-                  {!data && !error && (
-                    <EmptyRow>Loading…</EmptyRow>
-                  )}
+                  {data && (data.dues ?? []).length === 0 && <EmptyRow>No outstanding balances</EmptyRow>}
+                  {!data && !error && <EmptyRow>Loading…</EmptyRow>}
                 </div>
               </Panel>
 
               {/* Recent transactions */}
-              <Panel
-                title="Recent transactions"
-                subtitle="Payments received today"
-                viewAll={() =>
-                  navigate("/cases/transactions")
-                }
-              >
+              <Panel title="Recent transactions" subtitle="Latest payments received" viewAll={() => navigate("/cases/transactions")}>
                 <div className="dash-table-head dash-transaction-grid">
                   <span>PATIENT</span>
                   <span>AMOUNT</span>
@@ -929,66 +635,38 @@ export default function Dashboard() {
 
                 <div className="dash-table-body">
                   {(data?.transactions ?? []).map((item) => (
-                    <div
-                      className="dash-row dash-transaction-grid"
-                      key={item.id}
-                    >
+                    <div className="dash-row dash-transaction-grid" key={item.id}>
                       <div className="dash-patient">
                         <strong>{item.patient}</strong>
-                        <small>Reg. no. {item.regNo}</small>
+                        <small>
+                          Reg. no. {item.regNo} <i>•</i> {formatDay(item.paidAt)}
+                        </small>
                       </div>
 
-                      <span className="dash-positive">
-                        + {rupees(item.amount)}
-                      </span>
+                      <span className="dash-positive">+ {rupees(item.amount)}</span>
 
-                      <button
-                        type="button"
-                        className="dash-view-bill"
-                        onClick={() => navigate("/cases/bills")}
-                      >
+                      <button type="button" className="dash-view-bill" onClick={() => navigate("/cases/bills")}>
                         <FileText size={13} />
                         View
                       </button>
                     </div>
                   ))}
 
-                  {data &&
-                    (data.transactions ?? []).length === 0 && (
-                      <EmptyRow>
-                        No payments received today
-                      </EmptyRow>
-                    )}
-
-                  {!data && !error && (
-                    <EmptyRow>Loading…</EmptyRow>
-                  )}
+                  {data && (data.transactions ?? []).length === 0 && <EmptyRow>No payments received yet</EmptyRow>}
+                  {!data && !error && <EmptyRow>Loading…</EmptyRow>}
                 </div>
               </Panel>
             </div>
 
             {/* Recent activities */}
-            <Panel
-              title="Recent activities"
-              subtitle="Latest operational updates"
-              viewAll={() =>
-                navigate("/business/activities")
-              }
-            >
+            <Panel title="Recent activities" subtitle="Latest operational updates" viewAll={() => navigate("/business/activities")}>
               <div className="dash-activity-list">
                 {(data?.activities ?? []).map((item) => {
-                  const { tone, icon: Icon } = activityStyle(
-                    item.type
-                  );
+                  const { tone, icon: Icon } = activityStyle(item.type);
 
                   return (
-                    <div
-                      className="dash-activity-item"
-                      key={item.id}
-                    >
-                      <span
-                        className={`dash-activity-icon ${tone}`}
-                      >
+                    <div className="dash-activity-item" key={item.id}>
+                      <span className={`dash-activity-icon ${tone}`}>
                         <Icon size={16} />
                       </span>
 
@@ -1009,19 +687,12 @@ export default function Dashboard() {
                   );
                 })}
 
-                {data &&
-                  (data.activities ?? []).length === 0 && (
-                    <EmptyRow>No activity yet</EmptyRow>
-                  )}
-
-                {!data && !error && (
-                  <EmptyRow>Loading…</EmptyRow>
-                )}
+                {data && (data.activities ?? []).length === 0 && <EmptyRow>No activity yet</EmptyRow>}
+                {!data && !error && <EmptyRow>Loading…</EmptyRow>}
               </div>
             </Panel>
           </main>
 
-          {/* Sidebar */}
           <aside className="dash-side">
             <div className="dash-demo">
               <div className="dash-demo-top">
@@ -1029,31 +700,21 @@ export default function Dashboard() {
                   <CalendarDays size={17} />
                 </span>
 
-                <span className="dash-demo-status">
-                  Scheduled
-                </span>
+                <span className="dash-demo-status">Scheduled</span>
               </div>
 
               <h3>Product demo</h3>
 
-              <p>
-                Your scheduled demo details and meeting
-                information can appear here.
-              </p>
+              <p>Your scheduled demo details and meeting information can appear here.</p>
 
-              <button
-                type="button"
-                onClick={() => navigate("/getting-started")}
-              >
+              <button type="button" onClick={() => navigate("/getting-started")}>
                 View details
                 <ArrowRight size={14} />
               </button>
             </div>
 
             <div className="dash-refer">
-              <div className="dash-refer-label">
-                REFERRAL PROGRAM
-              </div>
+              <div className="dash-refer-label">REFERRAL PROGRAM</div>
 
               <h2>
                 Refer a lab
@@ -1078,19 +739,14 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => navigate("/business/referral")}
-              >
+              <button type="button" onClick={() => navigate("/business/referral")}>
                 Refer a lab
                 <ArrowRight size={15} />
               </button>
             </div>
 
             <div className="dash-links">
-              <button type="button">
-                Terms &amp; Conditions
-              </button>
+              <button type="button">Terms &amp; Conditions</button>
               <button type="button">Privacy Policy</button>
               <button type="button">Refund Policy</button>
             </div>
@@ -1098,15 +754,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* All four KPI popups */}
       {activeModal && data && (
         <RecordsModal
           type={activeModal}
-          patients={data.todayPatients ?? []}
-          reports={data.completedReports ?? []}
-          pendingReports={data.pendingReports ?? []}
-          // transactions={data.transactions ?? []}
-             transactions={data.collections ?? data.transactions ?? []}
+          lists={{
+            patients: data.patients ?? [],
+            completedBills: data.completedBills ?? [],
+            pendingBills: data.pendingBills ?? [],
+            collections: data.collections ?? [],
+          }}
+          totals={{
+            patients: data.kpis.patients.total,
+            completed: data.kpis.completedBills.total,
+            pending: data.kpis.pendingBills.total,
+          }}
           onClose={() => setActiveModal(null)}
         />
       )}
