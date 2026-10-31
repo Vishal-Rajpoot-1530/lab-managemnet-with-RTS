@@ -1,4 +1,5 @@
 
+
 const env = import.meta.env;
 const BASE_URL=(env.VITE_API_BASE_URL||"http://localhost:4000/api").replace(/\/+$/,'');
 export const API_CONFIG=Object.freeze({
@@ -25,6 +26,8 @@ export const API_CONFIG=Object.freeze({
   EMAIL_PREFERENCES:Object.freeze({BASE:"/manage/email-preferences"}),
   REFERRALS:Object.freeze({BASE:"/manage/referrals"}),
   DOCTOR_ACCESS:Object.freeze({BASE:"/manage/doctor-access",BY_ID:id=>`/manage/doctor-access/${id}`}),
+  /** Browser security: where the signed-in user is logged in (Manage > Browser security). */
+  SESSIONS:Object.freeze({BASE:"/manage/sessions",BY_ID:id=>`/manage/sessions/${id}`}),
 
   // ---- Lab
   INTERPRETATIONS:Object.freeze({BASE:"/lab/interpretations",BY_ID:id=>`/lab/interpretations/${id}`}),

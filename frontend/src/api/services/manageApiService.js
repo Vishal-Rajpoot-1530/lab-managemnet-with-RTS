@@ -4,7 +4,7 @@ import { asList, unwrap } from "../core/apiUnwrap";
 
 const E = API_CONFIG.ENDPOINTS;
 
-/** Manage menu: employees, lab account, e-mail preferences, referrals, doctor access. */
+/** Manage menu: employees, lab account, e-mail preferences, referrals, doctor access, browser security. */
 export default {
   /** Adding and changing employees is admin-only (enforced on the server). */
   employees: {
@@ -40,5 +40,17 @@ export default {
     update: async (id, payload) =>
       unwrap(await apiClient.patch(E.DOCTOR_ACCESS.BY_ID(id), payload), "doctorAccess", "doctor"),
     remove: (id) => apiClient.delete(E.DOCTOR_ACCESS.BY_ID(id)),
+  },
+
+  /**
+   * Browser security: where the signed-in user is logged in. Any signed-in user can see and
+   * manage their own sessions (no admin check on the server).
+   */
+  sessions: {
+    list: async () => asList(await apiClient.get(E.SESSIONS.BASE), "sessions"),
+    /** Signs out one browser. */
+    remove: (id) => apiClient.delete(E.SESSIONS.BY_ID(id)),
+    /** Signs out every browser except the one making the request. Returns how many were signed out. */
+    removeOthers: async () => unwrap(await apiClient.delete(E.SESSIONS.BASE), "revoked"),
   },
 };

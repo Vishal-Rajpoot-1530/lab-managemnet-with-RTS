@@ -1,17 +1,16 @@
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { manageApiService } from "../../api";
+import { authApi } from "../../api/core/apiAuth";
 import "./manage.css";
 
-const initial = [
-  { id: 1, name: "LAB OWNER", last: "21 Sep 2026, 7:36 PM", code: "131D", blocked: true },
-  { id: 2, name: "LAB OWNER", last: "21 Sep 2026, 1:07 PM", code: "D0F2", blocked: true },
-  { id: 3, name: "LAB OWNER", last: "21 Sep 2026, 6:39 PM", code: "53D8", blocked: true, current: true },
-  { id: 4, name: "LAB OWNER", last: "21 Sep 2026, 4:15 PM", code: "EEB4", blocked: true },
-  { id: 5, name: "LAB OWNER", last: "20 Sep 2026, 1:55 PM", code: "D908", blocked: true },
-  { id: 6, name: "LAB OWNER", last: "18 Sep 2026, 5:21 PM", code: "BDF4", blocked: true },
-  { id: 7, name: "LAB OWNER", last: "Not available", code: "0315", blocked: false },
-  { id: 8, name: "LAB OWNER", last: "Not available", code: "3B60", blocked: false },
-];
+/** Redirects to /login on 401. Returns true when it did. */
+function handleAuthError(err) {
+  if (err?.status === 401) {
+    window.location.assign("/login");
+    return true;
+  }
+  return false;
+}
 
 function ShieldIcon() {
   return (
@@ -76,71 +75,150 @@ function SearchIcon() {
   );
 }
 
+/** Pulls a rough "Chrome on Windows"-style label out of a User-Agent string. */
+function parseUserAgent(ua) {
+  if (!ua) return { browser: "Unknown browser", os: "Unknown device" };
+
+  const osMatch =
+    ua.match(/Windows NT [\d.]+/) ||
+    ua.match(/Mac OS X [\d_.]+/) ||
+    ua.match(/Android [\d.]+/) ||
+    ua.match(/(?:iPhone|iPad)[^)]*OS [\d_]+/) ||
+    ua.match(/Linux/);
+
+  const os = osMatch
+    ? osMatch[0].replace(/_/g, ".").replace("NT ", "").replace("Mac OS X", "macOS")
+    : "Unknown device";
+
+  let browser = "Unknown browser";
+  if (/Edg\//.test(ua)) browser = "Edge";
+  else if (/OPR\//.test(ua)) browser = "Opera";
+  else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = "Chrome";
+  else if (/Firefox\//.test(ua)) browser = "Firefox";
+  else if (/Safari\//.test(ua) && /Version\//.test(ua)) browser = "Safari";
+
+  return { browser, os };
+}
+
+function formatDate(iso) {
+  if (!iso) return "Not available";
+  return new Date(iso).toLocaleString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Loads the signed-in user once. Sessions are available to any signed-in user, no admin check. */
+function useManageSession() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!authApi.isLoggedIn()) {
+      window.location.assign("/login");
+      return;
+    }
+    authApi
+      .me()
+      .catch(handleAuthError)
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { loading };
+}
+
 export default function BrowserSecurity() {
-  const [items, setItems] = useState(initial);
+  const { loading: sessionLoading } = useManageSession();
+
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [q, setQ] = useState("");
-  const [security, setSecurity] = useState(true);
   const [filter, setFilter] = useState("all");
   const [notice, setNotice] = useState("");
+  const [busyId, setBusyId] = useState(null);
+  const [signingOutOthers, setSigningOutOthers] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    setLoadError("");
+    manageApiService.sessions
+      .list()
+      .then(setSessions)
+      .catch((err) => handleAuthError(err) || setLoadError(err.message))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionLoading]);
 
   const rows = useMemo(() => {
     const query = q.trim().toLowerCase();
 
-    return items.filter((item) => {
-      const matchesSearch =
-        item.code.toLowerCase().includes(query) ||
-        item.name.toLowerCase().includes(query) ||
-        item.last.toLowerCase().includes(query);
+    return sessions
+      .map((session) => ({ ...session, ...parseUserAgent(session.userAgent) }))
+      .filter((session) => {
+        const matchesSearch =
+          !query ||
+          session.browser.toLowerCase().includes(query) ||
+          session.os.toLowerCase().includes(query) ||
+          (session.ipAddress ?? "").toLowerCase().includes(query);
 
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "blocked" && item.blocked) ||
-        (filter === "allowed" && !item.blocked) ||
-        (filter === "current" && item.current);
+        const matchesFilter = filter === "all" || (filter === "current" && session.current);
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [items, q, filter]);
+        return matchesSearch && matchesFilter;
+      });
+  }, [sessions, q, filter]);
 
-  const blockedCount = items.filter((item) => item.blocked).length;
-  const allowedCount = items.length - blockedCount;
+  const currentCount = sessions.filter((session) => session.current).length;
+  const otherCount = sessions.length - currentCount;
 
-  const toggleBrowser = (id) => {
-    const browser = items.find((item) => item.id === id);
-    if (!browser) return;
-
-    if (browser.current && !browser.blocked) {
-      setNotice("Your current browser cannot be blocked from this screen.");
+  const signOutSession = async (session) => {
+    if (session.current) {
+      setNotice("Your current browser cannot be signed out from this screen.");
       return;
     }
 
-    const nextBlocked = !browser.blocked;
-
-    setItems((previous) =>
-      previous.map((item) =>
-        item.id === id ? { ...item, blocked: nextBlocked } : item
-      )
-    );
-
-    setNotice(
-      `${browser.code}: Browser ${
-        nextBlocked ? "blocked" : "unblocked"
-      } successfully.`
-    );
+    setBusyId(session.id);
+    try {
+      await manageApiService.sessions.remove(session.id);
+      setSessions((previous) => previous.filter((item) => item.id !== session.id));
+      setNotice("Browser signed out successfully.");
+    } catch (err) {
+      if (!handleAuthError(err)) setNotice(err.message || "Could not sign out that browser.");
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const handleSecurityToggle = () => {
-    const next = !security;
-    setSecurity(next);
-    setNotice(
-      `Browser security ${next ? "enabled" : "disabled"} locally.`
-    );
+  const signOutOthers = async () => {
+    setSigningOutOthers(true);
+    try {
+      const revoked = await manageApiService.sessions.removeOthers();
+      setSessions((previous) => previous.filter((session) => session.current));
+      setNotice(
+        revoked
+          ? `Signed out ${revoked} other browser${revoked === 1 ? "" : "s"}.`
+          : "No other browsers were signed in."
+      );
+    } catch (err) {
+      if (!handleAuthError(err)) setNotice(err.message || "Could not sign out other browsers.");
+    } finally {
+      setSigningOutOthers(false);
+    }
   };
 
   const resetFilters = () => {
     setQ("");
     setFilter("all");
   };
+
+  if (sessionLoading) return null;
 
   return (
     <main className="manage-page">
@@ -158,7 +236,7 @@ export default function BrowserSecurity() {
             <span className="beta">BETA</span>
           </h1>
           <p className="manage-subtitle">
-            Manage browser access and monitor laboratory workstations.
+            Review where you're signed in and sign out browsers you don't recognize.
           </p>
         </div>
 
@@ -167,11 +245,7 @@ export default function BrowserSecurity() {
         </div>
       </section>
 
-      <section
-        className={`security-card ${
-          security ? "security-enabled" : "security-disabled"
-        }`}
-      >
+      <section className="security-card security-enabled">
         <div className="security-card-top">
           <div className="security-card-identity">
             <div className="security-shield">
@@ -179,42 +253,31 @@ export default function BrowserSecurity() {
             </div>
 
             <div>
-              <div className="security-card-label">
-                LABORATORY PROTECTION
-              </div>
-              <h2>Control browser access</h2>
+              <div className="security-card-label">LABORATORY PROTECTION</div>
+              <h2>Sign out other browsers</h2>
               <p>
-                Manage which browsers are permitted to access your
-                laboratory workspace.
+                If you don't recognize a browser below, sign out everywhere else and
+                change your password from My account.
               </p>
             </div>
-          </div>
-
-          <div className="security-status">
-            <span className="security-status-dot" />
-            <span>
-              {security ? "Protection enabled" : "Protection disabled"}
-            </span>
           </div>
         </div>
 
         <div className="security-card-bottom">
           <div className="security-helper">
             <span className="security-info-icon">i</span>
-            {security
-              ? "Browser protection is marked as enabled."
-              : "Browser protection is currently marked as disabled."}
+            {otherCount > 0
+              ? `You're signed in on ${otherCount} other browser${otherCount === 1 ? "" : "s"} besides this one.`
+              : "This is the only browser you're currently signed in on."}
           </div>
 
           <button
             type="button"
-            className={`security-toggle ${security ? "is-on" : ""}`}
-            role="switch"
-            aria-checked={security}
-            onClick={handleSecurityToggle}
+            className="security-toggle"
+            onClick={signOutOthers}
+            disabled={signingOutOthers || otherCount === 0}
           >
-            <span className="security-toggle-knob" />
-            <span>{security ? "Turn off" : "Turn on"}</span>
+            <span>{signingOutOthers ? "Signing out..." : "Sign out other browsers"}</span>
           </button>
         </div>
       </section>
@@ -225,20 +288,9 @@ export default function BrowserSecurity() {
             <BrowserIcon />
           </div>
           <div>
-            <span className="browser-stat-label">Total browsers</span>
-            <strong>{items.length}</strong>
-            <small>Registered records</small>
-          </div>
-        </article>
-
-        <article className="browser-stat">
-          <div className="browser-stat-icon stat-blocked">
-            <span>⊘</span>
-          </div>
-          <div>
-            <span className="browser-stat-label">Blocked browsers</span>
-            <strong>{blockedCount}</strong>
-            <small>Marked as blocked</small>
+            <span className="browser-stat-label">Active sessions</span>
+            <strong>{sessions.length}</strong>
+            <small>Signed-in browsers</small>
           </div>
         </article>
 
@@ -247,9 +299,20 @@ export default function BrowserSecurity() {
             <span>✓</span>
           </div>
           <div>
-            <span className="browser-stat-label">Allowed browsers</span>
-            <strong>{allowedCount}</strong>
-            <small>Not marked as blocked</small>
+            <span className="browser-stat-label">This browser</span>
+            <strong>{currentCount}</strong>
+            <small>Current session</small>
+          </div>
+        </article>
+
+        <article className="browser-stat">
+          <div className="browser-stat-icon stat-blocked">
+            <span>⊘</span>
+          </div>
+          <div>
+            <span className="browser-stat-label">Other browsers</span>
+            <strong>{otherCount}</strong>
+            <small>Can be signed out</small>
           </div>
         </article>
       </section>
@@ -258,9 +321,7 @@ export default function BrowserSecurity() {
         <div className="browser-section-heading">
           <div>
             <h2>All browsers</h2>
-            <p>
-              Review browser records and manage access permissions.
-            </p>
+            <p>Review your signed-in sessions and sign out ones you don't recognize.</p>
           </div>
 
           <span className="browser-count">
@@ -274,7 +335,7 @@ export default function BrowserSecurity() {
 
             <input
               type="search"
-              placeholder="Search by browser code, name or last login..."
+              placeholder="Search by browser, device or IP address..."
               value={q}
               onChange={(event) => setQ(event.target.value)}
               aria-label="Search browsers"
@@ -300,8 +361,6 @@ export default function BrowserSecurity() {
               aria-label="Filter browsers"
             >
               <option value="all">All browsers</option>
-              <option value="blocked">Blocked</option>
-              <option value="allowed">Allowed</option>
               <option value="current">Current browser</option>
             </select>
           </label>
@@ -320,14 +379,25 @@ export default function BrowserSecurity() {
           </div>
         )}
 
-        {rows.length > 0 ? (
+        {loadError && (
+          <div className="manage-notice" role="alert">
+            <span>{loadError}</span>
+            <button type="button" onClick={load}>
+              Retry
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="browser-empty">
+            <p role="status">Loading your sessions...</p>
+          </div>
+        ) : rows.length > 0 ? (
           <div className="browser-grid">
-            {rows.map((browser) => (
+            {rows.map((session) => (
               <article
-                className={`browser-card ${
-                  browser.blocked ? "is-blocked" : "is-allowed"
-                }`}
-                key={browser.id}
+                className={`browser-card ${session.current ? "is-allowed" : ""}`}
+                key={session.id}
               >
                 <div className="browser-card-top">
                   <div className="browser-avatar">
@@ -335,35 +405,36 @@ export default function BrowserSecurity() {
                   </div>
 
                   <div className="browser-card-title">
-                    <h3>{browser.name}</h3>
-                    <span className="browser-record-id">
-                      Browser record #{browser.id}
-                    </span>
+                    <h3>{session.browser}</h3>
+                    <span className="browser-record-id">{session.os}</span>
                   </div>
 
-                  <span
-                    className={`browser-status-tag ${
-                      browser.blocked ? "tag-blocked" : "tag-allowed"
-                    }`}
-                  >
-                    <span />
-                    {browser.blocked ? "Blocked" : "Allowed"}
-                  </span>
+                  {session.current && (
+                    <span className="browser-status-tag tag-allowed">
+                      <span />
+                      Current
+                    </span>
+                  )}
                 </div>
 
                 <div className="browser-card-divider" />
 
                 <div className="browser-detail">
-                  <span>Last login</span>
-                  <strong>{browser.last}</strong>
+                  <span>Last active</span>
+                  <strong>{formatDate(session.lastSeenAt)}</strong>
+                </div>
+
+                <div className="browser-detail">
+                  <span>Signed in</span>
+                  <strong>{formatDate(session.createdAt)}</strong>
                 </div>
 
                 <div className="browser-detail browser-code-row">
-                  <span>Browser code</span>
-                  <code>{browser.code}</code>
+                  <span>IP address</span>
+                  <code>{session.ipAddress || "Not available"}</code>
                 </div>
 
-                {browser.current && (
+                {session.current && (
                   <div className="current-browser-note">
                     <span className="current-browser-dot" />
                     This is your current browser
@@ -372,23 +443,17 @@ export default function BrowserSecurity() {
 
                 <div className="browser-card-footer">
                   <span className="browser-access-label">
-                    {browser.blocked
-                      ? "Access restricted"
-                      : "Access permitted"}
+                    {session.current ? "This device" : "Signed in"}
                   </span>
 
                   <button
                     type="button"
-                    className={`browser-action ${
-                      browser.blocked ? "action-unblock" : "action-block"
-                    }`}
-                    onClick={() => toggleBrowser(browser.id)}
-                    disabled={browser.current && !browser.blocked}
+                    className="browser-action action-block"
+                    onClick={() => signOutSession(session)}
+                    disabled={session.current || busyId === session.id}
                   >
-                    <span aria-hidden="true">
-                      {browser.blocked ? "↗" : "⊘"}
-                    </span>
-                    {browser.blocked ? "Unblock" : "Block"}
+                    <span aria-hidden="true">⊘</span>
+                    {busyId === session.id ? "Signing out..." : "Sign out"}
                   </button>
                 </div>
               </article>
@@ -415,7 +480,7 @@ export default function BrowserSecurity() {
 
         <div className="browser-list-footer">
           Showing <strong>{rows.length}</strong> of{" "}
-          <strong>{items.length}</strong> browser records
+          <strong>{sessions.length}</strong> browser records
         </div>
       </section>
     </main>
